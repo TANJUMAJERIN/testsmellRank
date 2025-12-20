@@ -7,7 +7,7 @@ FastAPI backend with MongoDB authentication.
 ### Prerequisites
 
 - Python 3.8+
-- MongoDB installed and running locally (default port 27017)
+- MongoDB Atlas account (Cloud MongoDB)
 
 ### Installation
 
@@ -41,7 +41,7 @@ pip install -r requirements.txt
 
 5. Configure environment variables:
    - Copy `.env.example` to `.env`
-   - Update MongoDB URL if needed (default: mongodb://localhost:27017)
+   - Update MONGODB_URL with your MongoDB Atlas connection string
    - Change SECRET_KEY in production
 
 ### Running the Server
@@ -69,3 +69,13 @@ API Documentation (Swagger): http://localhost:8000/docs
 ## MongoDB Collections
 
 - `users` - Stores user information with hashed passwords
+
+## MongoDB Atlas Setup
+
+This project uses MongoDB Atlas (cloud database). Make sure to:
+
+1. Create a MongoDB Atlas account at https://www.mongodb.com/cloud/atlas
+2. Create a cluster and database
+3. Get your connection string from Atlas
+4. Update the MONGODB_URL in your `.env` file with the Atlas connection string
+5. Whitelist your IP address in Atlas Network Access settings
