@@ -1,0 +1,12 @@
+# Test Smell Detection Libraries
+pytest>=7.0.0
+pytest-smell>=0.1.0  # Test smell detection plugin for pytest
+radon>=5.1.0  # Complexity and maintainability metrics
+flake8>=6.0.0  # Code quality checker
+jscpd-python>=0.1.0  # Python wrapper for JSCPD (if available)
+astpath>=0.9.0  # AST-based pattern matching (alternative to ast-grep)
+
+# Additional useful libraries
+pytest-cov>=4.0.0  # Coverage support
+pytest-timeout>=2.1.0  # Detect slow tests
+pylint>=2.17.0  # Additional code quality checks

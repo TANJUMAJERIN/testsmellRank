@@ -1,0 +1,20 @@
+{
+  "threshold": 0,
+  "reporters": ["html", "json", "console"],
+  "ignore": [
+    "**/__pycache__/**",
+    "**/venv/**",
+    "**/env/**",
+    "**/.venv/**",
+    "**/node_modules/**",
+    "**/.git/**"
+  ],
+  "format": ["python"],
+  "minLines": 3,
+  "minTokens": 30,
+  "maxLines": 500,
+  "maxSize": "100kb",
+  "output": "./jscpd-report",
+  "absolute": true,
+  "gitignore": true
+}

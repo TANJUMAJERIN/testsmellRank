@@ -1,0 +1,165 @@
+{
+  "test_directory": "tests",
+  "results": {
+    "test_arithmetic.py": {
+      "ast_smells": [
+        {
+          "line": 3,
+          "type": "Magic Number Test",
+          "function": "test_addition",
+          "description": "Test uses magic number: 8"
+        },
+        {
+          "line": 4,
+          "type": "Magic Number Test",
+          "function": "test_addition",
+          "description": "Test uses magic number: 5"
+        },
+        {
+          "line": 5,
+          "type": "Magic Number Test",
+          "function": "test_addition",
+          "description": "Test uses magic number: 9"
+        }
+      ]
+    },
+    "test_assertionless.py": {
+      "ast_smells": [
+        {
+          "line": 1,
+          "type": "Assertion-Less Test",
+          "function": "test_no_assertions",
+          "description": "Test function has no assertions"
+        }
+      ]
+    },
+    "test_conditional.py": {
+      "ast_smells": [
+        {
+          "line": 3,
+          "type": "Conditional Test Logic",
+          "function": "test_conditional_logic",
+          "description": "Test contains if/else logic (tests should be deterministic)"
+        }
+      ]
+    },
+    "test_constructor.py": {
+      "ast_smells": [
+        {
+          "line": 6,
+          "type": "Magic Number Test",
+          "function": "test_value",
+          "description": "Test uses magic number: 10"
+        }
+      ]
+    },
+    "test_duplication.py": {
+      "ast_smells": [
+        {
+          "line": 4,
+          "type": "Magic Number Test",
+          "function": "test_dup1",
+          "description": "Test uses magic number: 15"
+        },
+        {
+          "line": 9,
+          "type": "Magic Number Test",
+          "function": "test_dup2",
+          "description": "Test uses magic number: 15"
+        }
+      ]
+    },
+    "test_empty.py": {
+      "ast_smells": [
+        {
+          "line": 2,
+          "type": "Empty Test",
+          "function": "test_empty",
+          "description": "Test function has only pass statement"
+        },
+        {
+          "line": 2,
+          "type": "Assertion-Less Test",
+          "function": "test_empty",
+          "description": "Test function has no assertions"
+        }
+      ]
+    },
+    "test_exception.py": {
+      "ast_smells": [
+        {
+          "line": 2,
+          "type": "Exception Handling",
+          "function": "test_exception_handling",
+          "description": "Test catches generic Exception (use pytest.raises)"
+        }
+      ]
+    },
+    "test_flaky.py": {
+      "ast_smells": [
+        {
+          "line": 3,
+          "type": "Assertion-Less Test",
+          "function": "test_flaky_1",
+          "description": "Test function has no assertions"
+        }
+      ]
+    },
+    "test_lazy.py": {
+      "ast_smells": [
+        {
+          "line": 3,
+          "type": "Magic Number Test",
+          "function": "test_case1",
+          "description": "Test uses magic number: 5"
+        },
+        {
+          "line": 7,
+          "type": "Magic Number Test",
+          "function": "test_case2",
+          "description": "Test uses magic number: 5"
+        }
+      ]
+    },
+    "test_magic.py": {
+      "ast_smells": [
+        {
+          "line": 2,
+          "type": "Magic Number Test",
+          "function": "test_magic",
+          "description": "Test uses magic number: 6.28318"
+        }
+      ]
+    },
+    "test_resource.py": {
+      "ast_smells": [
+        {
+          "line": 1,
+          "type": "Assertion-Less Test",
+          "function": "test_file_read",
+          "description": "Test function has no assertions"
+        }
+      ]
+    },
+    "test_slow.py": {
+      "ast_smells": [
+        {
+          "line": 4,
+          "type": "Sleepy Test",
+          "function": "test_sleepy",
+          "description": "Test uses time.sleep (may be flaky)"
+        }
+      ]
+    },
+    "test_verbose.py": {
+      "ast_smells": [
+        {
+          "line": 4,
+          "type": "Test Logic in Loop",
+          "function": "test_verbose",
+          "description": "Test contains loop (use parameterized tests instead)"
+        }
+      ]
+    }
+  }
+}
