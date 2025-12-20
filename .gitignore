@@ -1,5 +1,10 @@
 venv/
 node_modules/
 .DS_Store
-_pycache_/
+__pycache__/
+*/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
 .vite
