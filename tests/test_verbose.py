@@ -4,3 +4,5 @@ def test_verbose():
     for i in range(50):  # Long + verbose
         x += i
     assert x > 0
+
+# Enhanced verbosity
