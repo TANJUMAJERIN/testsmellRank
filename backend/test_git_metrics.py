@@ -34,7 +34,7 @@ print("TEST 2: Git History Extraction")
 print("=" * 60)
 
 # Test on the current repository
-project_path = Path(__file__).parent.parent.parent
+project_path = Path(__file__).parent.parent
 print(f"Repository: {project_path}")
 
 commits = extract_git_history(project_path)

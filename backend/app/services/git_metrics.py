@@ -129,6 +129,37 @@ def extract_git_history(repo_path: Path) -> List[Dict]:
 # =====================================================
 # FILE CLASSIFICATION
 # =====================================================
+def normalize_path(path: str) -> str:
+    """Normalize file path for matching between git and smell detection"""
+    # Convert backslashes to forward slashes
+    path = path.replace('\\', '/')
+    # Remove common prefixes that might differ
+    path = path.replace('test file/', '')
+    return path
+
+
+def paths_match(smell_file_path: str, git_file_path: str) -> bool:
+    """Check if two file paths refer to the same file"""
+    norm_smell = normalize_path(smell_file_path).lower()
+    norm_git = normalize_path(git_file_path).lower()
+    
+    # Exact match after normalization
+    if norm_smell == norm_git:
+        return True
+    
+    # Check if one ends with the other (handles different root paths)
+    if norm_smell.endswith(norm_git) or norm_git.endswith(norm_smell):
+        return True
+    
+    # Check filename match as last resort
+    smell_filename = norm_smell.split('/')[-1]
+    git_filename = norm_git.split('/')[-1]
+    if smell_filename == git_filename and smell_filename.startswith('test'):
+        return True
+    
+    return False
+
+
 def is_test_file(filename: str) -> bool:
     """Check if a file is a test file"""
     filename_lower = filename.lower()
@@ -236,13 +267,24 @@ def calculate_smell_metrics(
     prod_files = {f for f in file_metrics.keys() if is_production_file(f)}
     test_files = {f for f in file_metrics.keys() if is_test_file(f)}
     
-    # Calculate total commits for normalization
-    prod_total_commits = sum(file_metrics[f]['total_changes'] for f in prod_files)
+    # Calculate total commits for normalization (using test files only)
     test_total_commits = sum(file_metrics[f]['total_changes'] for f in test_files)
     
-    if prod_total_commits == 0 or test_total_commits == 0:
-        print("Warning: No production or test commits found")
+    if test_total_commits == 0:
+        print("Warning: No test file commits found")
         return {}
+    
+    print(f"📊 Found {len(test_files)} test files in git history")
+    print(f"📊 Total test file commits: {test_total_commits}")
+    
+    if len(test_files) > 0:
+        print(f"📊 Git test files sample: {list(test_files)[:5]}")
+    
+    # Get all unique smell files
+    all_smell_files = set(inst['file'] for instances in smells_by_type.values() for inst in instances)
+    print(f"📊 Test files with smells: {len(all_smell_files)}")
+    if len(all_smell_files) > 0:
+        print(f"📊 Smell files sample: {list(all_smell_files)[:5]}")
     
     results = {}
     
@@ -250,61 +292,47 @@ def calculate_smell_metrics(
         # Get test files containing this smell
         smell_test_files = set(inst['file'] for inst in instances)
         
-        # Calculate metrics for files with this smell
-        prod_changes = 0
-        prod_churn = 0
-        prod_faulty_changes = 0
-        prod_faulty_churn = 0
-        
+        # Calculate metrics for test files with this smell
         test_changes = 0
         test_churn = 0
         test_faulty_changes = 0
         test_faulty_churn = 0
+        matched_git_files = []
         
-        # Aggregate metrics for test files with this smell
-        for test_file in smell_test_files:
-            if test_file in file_metrics:
-                metrics = file_metrics[test_file]
-                test_changes += metrics['total_changes']
-                test_churn += metrics['total_churn']
-                test_faulty_changes += metrics['faulty_changes']
-                test_faulty_churn += metrics['faulty_churn']
+        # Aggregate metrics for test files with this smell ONLY
+        # Use path matching to handle different path formats
+        for smell_file in smell_test_files:
+            # Find matching file in git metrics
+            for git_file, metrics in file_metrics.items():
+                if paths_match(smell_file, git_file):
+                    test_changes += metrics['total_changes']
+                    test_churn += metrics['total_churn']
+                    test_faulty_changes += metrics['faulty_changes']
+                    test_faulty_churn += metrics['faulty_churn']
+                    matched_git_files.append(git_file)
+                    break  # Only match once per smell file
         
-        # For production files, use all production files (simplified approach)
-        # In a more sophisticated version, you'd map test files to their tested modules
-        for prod_file in prod_files:
-            metrics = file_metrics[prod_file]
-            prod_changes += metrics['total_changes']
-            prod_churn += metrics['total_churn']
-            prod_faulty_changes += metrics['faulty_changes']
-            prod_faulty_churn += metrics['faulty_churn']
+        # Calculate normalized metrics (using only test files)
+        # Normalize by the total number of smell instances to get per-smell metrics
+        num_instances = len(instances)
         
-        # Calculate normalized metrics
-        change_frequency = (
-            (prod_changes / prod_total_commits if prod_total_commits > 0 else 0) +
-            (test_changes / test_total_commits if test_total_commits > 0 else 0)
-        )
-        
-        change_extent = (
-            (prod_churn / prod_total_commits if prod_total_commits > 0 else 0) +
-            (test_churn / test_total_commits if test_total_commits > 0 else 0)
-        )
-        
-        fault_frequency = (
-            (prod_faulty_changes / prod_total_commits if prod_total_commits > 0 else 0) +
-            (test_faulty_changes / test_total_commits if test_total_commits > 0 else 0)
-        )
-        
-        fault_extent = (
-            (prod_faulty_churn / prod_total_commits if prod_total_commits > 0 else 0) +
-            (test_faulty_churn / test_total_commits if test_total_commits > 0 else 0)
-        )
+        change_frequency = (test_changes / test_total_commits) if test_total_commits > 0 else 0
+        change_extent = (test_churn / test_total_commits) if test_total_commits > 0 else 0
+        fault_frequency = (test_faulty_changes / test_total_commits) if test_total_commits > 0 else 0
+        fault_extent = (test_faulty_churn / test_total_commits) if test_total_commits > 0 else 0
         
         # For now, use simple sum for CP and FP
         # In full implementation, would calculate Spearman correlation
         cp_score = change_frequency + change_extent
         fp_score = fault_frequency + fault_extent
         prioritization_score = (cp_score + fp_score) / 2
+        
+        print(f"  {smell_type}: {num_instances} instances in {len(smell_test_files)} files")
+        print(f"    Matched {len(matched_git_files)}/{len(smell_test_files)} files in git history")
+        if matched_git_files:
+            print(f"    Total commits: {test_changes}")
+        print(f"    CP={cp_score:.4f} (ChgFreq={change_frequency:.4f}, ChgExt={change_extent:.4f})")
+        print(f"    FP={fp_score:.4f} (FaultFreq={fault_frequency:.4f}, FaultExt={fault_extent:.4f})")
         
         results[smell_type] = {
             'change_frequency': round(change_frequency, 4),
