@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth import router as auth_router
+from app.routes.upload import router as upload_router
 
 app = FastAPI(title="Test Smell Rank API")
 
@@ -15,6 +16,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_router)
+app.include_router(upload_router)
 
 @app.get("/")
 async def root():

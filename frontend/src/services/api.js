@@ -47,4 +47,33 @@ export const authAPI = {
   },
 };
 
+export const uploadGithubRepo = async (repoUrl) => {
+  const response = await api.post("/upload/github", { repo_url: repoUrl });
+  return response.data;
+};
+
+export const uploadZipFile = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await api.post("/upload/zip", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+};
+
+export const listUserProjects = async () => {
+  const response = await api.get("/upload/projects");
+  return response.data;
+};
+
+export const detectTestSmells = async (projectPath) => {
+  const response = await api.post("/upload/detect-smells", {
+    project_path: projectPath,
+  });
+  return response.data;
+};
+
 export default api;
