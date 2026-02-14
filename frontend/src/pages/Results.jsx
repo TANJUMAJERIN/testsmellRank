@@ -22,20 +22,20 @@ const Results = () => {
 
     const analysis = projectData.smell_analysis;
     setResults(analysis);
-    
+
     // Calculate unique smell types and their counts
     const smellMap = new Map();
-    analysis.details?.forEach(fileResult => {
-      fileResult.smells?.forEach(smell => {
+    analysis.details?.forEach((fileResult) => {
+      fileResult.smells?.forEach((smell) => {
         const count = smellMap.get(smell.type) || 0;
         smellMap.set(smell.type, count + 1);
       });
     });
-    
+
     const uniqueSmellsArray = Array.from(smellMap.entries())
       .map(([type, count]) => ({ type, count }))
       .sort((a, b) => b.count - a.count);
-    
+
     setUniqueSmells(uniqueSmellsArray);
     setLoading(false);
   }, [projectData, navigate]);
@@ -151,7 +151,10 @@ const Results = () => {
                         ></div>
                       </div>
                       <span className="smell-type-percentage">
-                        {((smell.count / results.total_smells) * 100).toFixed(1)}% of total
+                        {((smell.count / results.total_smells) * 100).toFixed(
+                          1,
+                        )}
+                        % of total
                       </span>
                     </div>
                   ))}
