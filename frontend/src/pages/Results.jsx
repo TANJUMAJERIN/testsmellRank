@@ -13,7 +13,7 @@
 
 //   const projectData = location.state?.projectData;
 
-//   useEffect(() => {
+//   useEffect(() => {///
 //     if (!projectData || !projectData.smell_analysis) {
 //       navigate("/dashboard");
 //       return;
