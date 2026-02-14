@@ -3,3 +3,5 @@ def test_addition():
     assert x == 8
     assert x > 5
     assert x != 9   # Assertion roulette (no messages), Duplicate Asserts
+
+# Refactored test structure
