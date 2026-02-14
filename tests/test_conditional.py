@@ -4,3 +4,5 @@ def test_conditional_logic():
         assert True
     else:
         assert False
+
+# Fix: Improved condition handling
