@@ -7,33 +7,42 @@ This feature calculates **Change Proneness (CP)** and **Fault Proneness (FP)** m
 ## Key Concepts
 
 ### Change Proneness (CP)
+
 Measures how frequently files with a particular test smell undergo changes:
+
 - **Change Frequency**: Number of commits affecting test files with the smell
 - **Change Extent**: Amount of code churn (additions + deletions) in those commits
 - **CP Score = Change Frequency + Change Extent**
 
 ### Fault Proneness (FP)
+
 Measures how frequently files with a particular test smell are associated with bug fixes:
+
 - **Fault Frequency**: Number of fault-fixing commits affecting test files with the smell
 - **Fault Extent**: Amount of code churn in fault-fixing commits
 - **FP Score = Fault Frequency + Fault Extent**
 
 ### Prioritization Score (PS)
+
 Combined metric for ranking test smells:
+
 - **PS = (CP + FP) / 2**
 - Higher scores indicate more critical test smells that should be refactored first
 
 ## Implementation Details
 
 ### 1. Git History Extraction
+
 **File**: `backend/app/services/git_metrics.py`
 
 **Function**: `extract_git_history(repo_path)`
+
 - Uses `git log --numstat` to extract commit history
 - Captures: commit hash, message, timestamp, file changes, code churn
 - Identifies fault-fixing commits using keywords: bug, fix, error, defect, issue, fault, crash, patch
 
 **Example Output**:
+
 ```python
 [
     {
@@ -52,9 +61,11 @@ Combined metric for ranking test smells:
 ```
 
 ### 2. Metric Calculation
+
 **Function**: `calculate_smell_metrics(smell_instances, commits)`
 
 Steps:
+
 1. Group smells by type
 2. Calculate file-level metrics (total changes, churn, faulty changes)
 3. Aggregate metrics for test files containing each smell type
@@ -62,6 +73,7 @@ Steps:
 5. Calculate CP, FP, and PS scores
 
 **Normalization Formula**:
+
 ```
 ChgFreq = (prod_changes / prod_total_commits) + (test_changes / test_total_commits)
 ChgExt = (prod_churn / prod_total_commits) + (test_churn / test_total_commits)
@@ -70,9 +82,11 @@ FaultExt = (prod_faulty_churn / prod_total_commits) + (test_faulty_churn / test_
 ```
 
 ### 3. Advanced Correlation Analysis
+
 **Function**: `calculate_correlations(smell_instances, file_metrics, all_test_files)`
 
 Uses **Spearman rank correlation** to measure the relationship between smell presence and metrics:
+
 1. Create binary array: 1 if file has smell, 0 otherwise
 2. Create metric arrays: change frequency, change extent, fault frequency, fault extent
 3. Calculate Spearman's ρ (rho) for each metric
@@ -80,16 +94,18 @@ Uses **Spearman rank correlation** to measure the relationship between smell pre
 5. Compute FP = ρ(FaultFreq) + ρ(FaultExt)
 
 ### 4. Integration with Smell Detection
+
 **Modified**: `backend/app/services/smell_detection.py`
 
 The main function now accepts `include_git_metrics` parameter:
+
 ```python
 def detect_smells_for_project(project_path, include_git_metrics=True):
     # ... detect smells ...
-    
+
     if include_git_metrics:
         git_analysis = analyze_project_with_git(project_path, all_smell_instances)
-    
+
     return {
         "total_files": ...,
         "total_smells": ...,
@@ -101,9 +117,11 @@ def detect_smells_for_project(project_path, include_git_metrics=True):
 ## Frontend Visualization
 
 ### Prioritization Table
+
 **File**: `frontend/src/pages/Results.jsx`
 
 Displays a ranked table of test smells with:
+
 - Smell type name
 - Number of instances
 - CP Score with visual bar
@@ -112,12 +130,15 @@ Displays a ranked table of test smells with:
 - Ranking badge (color-coded)
 
 **Ranking Color Scheme**:
+
 - **Top 3** (Red): High priority - refactor immediately
 - **4-6** (Orange): Medium priority - schedule for refactoring
 - **7+** (Blue): Low priority - monitor
 
 ### Git Statistics Summary
+
 Shows repository-level metrics:
+
 - Total commits analyzed
 - Faulty commits detected
 - Fault percentage (%)
@@ -125,7 +146,9 @@ Shows repository-level metrics:
 - Test files identified
 
 ### Metrics Legend
+
 Explains each metric to users:
+
 - CP Score: Likelihood of code changes
 - FP Score: Likelihood of bugs
 - Priority Score: Overall urgency
@@ -133,22 +156,27 @@ Explains each metric to users:
 ## Usage
 
 ### Requirements
+
 1. Project must be a Git repository
 2. Git must be installed and accessible via command line
 3. Repository must have commit history
 
 ### Dependencies
+
 Add to `requirements.txt`:
+
 ```
 scipy==1.11.4
 ```
 
 Install:
+
 ```bash
 pip install scipy
 ```
 
 ### API Response Structure
+
 ```json
 {
   "total_files": 17,
@@ -180,7 +208,9 @@ pip install scipy
 ```
 
 ### Error Handling
+
 If Git history is unavailable:
+
 ```json
 {
   "git_metrics": {
