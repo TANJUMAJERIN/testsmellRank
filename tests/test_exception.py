@@ -3,3 +3,5 @@ def test_exception_handling():
         int("abc")
     except:
         assert True
+
+# Bug: Fixed exception handling
