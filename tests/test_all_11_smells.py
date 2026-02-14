@@ -224,3 +224,5 @@ def test_random_calculations():
     z = x * y - x + y
     w = z / 2
     assert w > 0
+
+# Issue #42: Fixed assertions
