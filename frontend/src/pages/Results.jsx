@@ -10,6 +10,7 @@ const Results = () => {
 
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState(null);
+  const [uniqueSmells, setUniqueSmells] = useState([]);
 
   const projectData = location.state?.projectData;
 
@@ -19,7 +20,23 @@ const Results = () => {
       return;
     }
 
-    setResults(projectData.smell_analysis);
+    const analysis = projectData.smell_analysis;
+    setResults(analysis);
+    
+    // Calculate unique smell types and their counts
+    const smellMap = new Map();
+    analysis.details?.forEach(fileResult => {
+      fileResult.smells?.forEach(smell => {
+        const count = smellMap.get(smell.type) || 0;
+        smellMap.set(smell.type, count + 1);
+      });
+    });
+    
+    const uniqueSmellsArray = Array.from(smellMap.entries())
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count);
+    
+    setUniqueSmells(uniqueSmellsArray);
     setLoading(false);
   }, [projectData, navigate]);
 
@@ -77,7 +94,7 @@ const Results = () => {
           <div className="results-summary">
             {/* Summary Cards */}
             <div className="summary-cards">
-              <div className="summary-card">
+              <div className="summary-card card-primary">
                 <div className="summary-icon">📁</div>
                 <div className="summary-info">
                   <h3>{results.total_files}</h3>
@@ -85,7 +102,7 @@ const Results = () => {
                 </div>
               </div>
 
-              <div className="summary-card">
+              <div className="summary-card card-warning">
                 <div className="summary-icon">⚠️</div>
                 <div className="summary-info">
                   <h3>{results.total_smells}</h3>
@@ -93,7 +110,15 @@ const Results = () => {
                 </div>
               </div>
 
-              <div className="summary-card">
+              <div className="summary-card card-info">
+                <div className="summary-icon">🔍</div>
+                <div className="summary-info">
+                  <h3>{uniqueSmells.length}</h3>
+                  <p>Unique Smell Types</p>
+                </div>
+              </div>
+
+              <div className="summary-card card-success">
                 <div className="summary-icon">📊</div>
                 <div className="summary-info">
                   <h3>
@@ -105,6 +130,34 @@ const Results = () => {
                 </div>
               </div>
             </div>
+
+            {/* Smell Type Breakdown */}
+            {uniqueSmells.length > 0 && (
+              <div className="smell-breakdown">
+                <h3>🧪 Test Smell Type Distribution</h3>
+                <div className="smell-types-grid">
+                  {uniqueSmells.map((smell, index) => (
+                    <div key={index} className="smell-type-card">
+                      <div className="smell-type-header">
+                        <span className="smell-type-name">{smell.type}</span>
+                        <span className="smell-type-badge">{smell.count}</span>
+                      </div>
+                      <div className="smell-type-bar">
+                        <div
+                          className="smell-type-fill"
+                          style={{
+                            width: `${(smell.count / results.total_smells) * 100}%`,
+                          }}
+                        ></div>
+                      </div>
+                      <span className="smell-type-percentage">
+                        {((smell.count / results.total_smells) * 100).toFixed(1)}% of total
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Detailed Results Table */}
             {results.details && results.details.length > 0 ? (
