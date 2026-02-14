@@ -162,6 +162,106 @@ const Results = () => {
               </div>
             )}
 
+            {/* Git-based Prioritization Metrics */}
+            {results.git_metrics && results.git_metrics.metrics && (
+              <div className="git-metrics-section">
+                <h3>📈 Test Smell Prioritization (Git-based Metrics)</h3>
+                
+                {results.git_metrics.statistics && (
+                  <div className="git-stats">
+                    <div className="git-stat-item">
+                      <span className="stat-label">Total Commits:</span>
+                      <span className="stat-value">{results.git_metrics.statistics.total_commits}</span>
+                    </div>
+                    <div className="git-stat-item">
+                      <span className="stat-label">Faulty Commits:</span>
+                      <span className="stat-value">{results.git_metrics.statistics.faulty_commits}</span>
+                    </div>
+                    <div className="git-stat-item">
+                      <span className="stat-label">Fault Rate:</span>
+                      <span className="stat-value">{results.git_metrics.statistics.fault_percentage}%</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="prioritization-table-container">
+                  <table className="prioritization-table">
+                    <thead>
+                      <tr>
+                        <th>Smell Type</th>
+                        <th>Instances</th>
+                        <th>CP Score</th>
+                        <th>FP Score</th>
+                        <th>Priority Score</th>
+                        <th>Ranking</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(results.git_metrics.metrics)
+                        .sort((a, b) => b[1].prioritization_score - a[1].prioritization_score)
+                        .map(([smellType, metrics], index) => (
+                          <tr key={index} className={index < 3 ? 'high-priority' : ''}>
+                            <td className="smell-name-cell">{smellType}</td>
+                            <td>{metrics.instance_count}</td>
+                            <td>
+                              <div className="score-cell">
+                                <span className="score-value">{metrics.cp_score}</span>
+                                <div className="score-bar cp-bar">
+                                  <div
+                                    className="score-fill"
+                                    style={{ width: `${Math.min(metrics.cp_score * 50, 100)}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="score-cell">
+                                <span className="score-value">{metrics.fp_score}</span>
+                                <div className="score-bar fp-bar">
+                                  <div
+                                    className="score-fill"
+                                    style={{ width: `${Math.min(metrics.fp_score * 50, 100)}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="priority-score">
+                                <strong>{metrics.prioritization_score}</strong>
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`rank-badge rank-${index + 1 <= 3 ? 'high' : index + 1 <= 6 ? 'medium' : 'low'}`}>
+                                #{index + 1}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="metrics-legend">
+                  <h4>📋 Metrics Explanation:</h4>
+                  <ul>
+                    <li><strong>CP Score (Change Proneness):</strong> Likelihood of code changes in files with this smell</li>
+                    <li><strong>FP Score (Fault Proneness):</strong> Likelihood of bugs in files with this smell</li>
+                    <li><strong>Priority Score:</strong> Average of CP and FP scores - higher means more urgent</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {results.git_metrics && results.git_metrics.error && (
+              <div className="git-metrics-error">
+                <h3>⚠️ Git Metrics Not Available</h3>
+                <p>{results.git_metrics.error}</p>
+                <p className="error-hint">
+                  To enable prioritization metrics, ensure your project is a Git repository with commit history.
+                </p>
+              </div>
+            )}
+
             {/* Detailed Results Table */}
             {results.details && results.details.length > 0 ? (
               <div className="smell-details">

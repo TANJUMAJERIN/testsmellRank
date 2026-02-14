@@ -4,12 +4,13 @@ import subprocess
 import ast
 from pathlib import Path
 from collections import defaultdict
+from .git_metrics import analyze_project_with_git
 
 
 # =====================================================
 # MAIN ENTRY POINT
 # =====================================================
-def detect_smells_for_project(project_path: Path):
+def detect_smells_for_project(project_path: Path, include_git_metrics: bool = True):
 
     test_files = list(project_path.glob("**/test_*.py")) + \
                  list(project_path.glob("**/*_test.py"))
@@ -18,11 +19,13 @@ def detect_smells_for_project(project_path: Path):
         return {
             "total_files": 0,
             "total_smells": 0,
-            "details": []
+            "details": [],
+            "git_metrics": None
         }
 
     results = []
     total_smells = 0
+    all_smell_instances = []
 
     for file in test_files:
         rel_path = str(file.relative_to(project_path))
@@ -32,16 +35,32 @@ def detect_smells_for_project(project_path: Path):
 
         total_smells += len(file_smells)
 
+        # Add file path to each smell instance for git metrics
+        for smell in file_smells:
+            smell_instance = smell.copy()
+            smell_instance['file'] = rel_path
+            all_smell_instances.append(smell_instance)
+
         results.append({
             "file": rel_path,
             "smells": file_smells,
             "smell_count": len(file_smells)
         })
 
+    # Calculate Git-based metrics (CP/FP)
+    git_analysis = None
+    if include_git_metrics and all_smell_instances:
+        try:
+            git_analysis = analyze_project_with_git(project_path, all_smell_instances)
+        except Exception as e:
+            print(f"Git metrics calculation failed: {e}")
+            git_analysis = {"error": str(e)}
+
     return {
         "total_files": len(test_files),
         "total_smells": total_smells,
-        "details": results
+        "details": results,
+        "git_metrics": git_analysis
     }
 
 
