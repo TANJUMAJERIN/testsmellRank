@@ -8,3 +8,10 @@ __pycache__/
 *.pyo
 *.pyd
 .vite
+test-file
+
+# Environment variables
+.env
+
+# Uploaded project files
+backend/uploaded_projects/
