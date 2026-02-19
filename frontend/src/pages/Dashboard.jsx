@@ -13,6 +13,8 @@ const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const [activeTab, setActiveTab] = useState("dashboard");
+
   // Project list state
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
@@ -28,8 +30,9 @@ const Dashboard = () => {
   const [zipFile, setZipFile] = useState(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState("");
+  const [zipSuccess, setZipSuccess] = useState("");
 
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // project id awaiting confirm
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
     fetchProjects();
@@ -40,7 +43,7 @@ const Dashboard = () => {
       const data = await listProjects();
       setProjects(data);
     } catch {
-      // ignore — user will see empty state
+      // ignore
     } finally {
       setProjectsLoading(false);
     }
@@ -51,25 +54,14 @@ const Dashboard = () => {
     navigate("/login");
   };
 
-  // ── Create new project ──────────────────────────────────────────
   const handleCreateProject = async (e) => {
     e.preventDefault();
-    if (!newProjectName.trim()) {
-      setModalError("Project name is required");
-      return;
-    }
-    if (!newRepoUrl.trim()) {
-      setModalError("GitHub URL is required");
-      return;
-    }
-
+    if (!newProjectName.trim()) { setModalError("Project name is required"); return; }
+    if (!newRepoUrl.trim()) { setModalError("GitHub URL is required"); return; }
     setModalLoading(true);
     setModalError("");
     try {
-      const project = await createProject(
-        newProjectName.trim(),
-        newRepoUrl.trim(),
-      );
+      const project = await createProject(newProjectName.trim(), newRepoUrl.trim());
       setProjects((prev) => [project, ...prev]);
       setShowModal(false);
       setNewProjectName("");
@@ -84,7 +76,6 @@ const Dashboard = () => {
     }
   };
 
-  // ── Delete project ──────────────────────────────────────────────
   const handleDelete = async (projectId) => {
     try {
       await deleteProject(projectId);
@@ -96,15 +87,12 @@ const Dashboard = () => {
     }
   };
 
-  // ── ZIP one-off upload ──────────────────────────────────────────
   const handleZipSubmit = async (e) => {
     e.preventDefault();
-    if (!zipFile) {
-      setZipError("Please select a ZIP file");
-      return;
-    }
+    if (!zipFile) { setZipError("Please select a ZIP file"); return; }
     setZipLoading(true);
     setZipError("");
+    setZipSuccess("");
     try {
       const response = await uploadZipFile(zipFile);
       setZipFile(null);
@@ -120,142 +108,194 @@ const Dashboard = () => {
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
     return new Date(dateStr).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+      year: "numeric", month: "short", day: "numeric",
     });
   };
 
   return (
     <div className="dashboard-container">
-      {/* Navbar */}
+      {/* ── Top Navbar ─────────────────────────────────────────── */}
       <nav className="navbar">
         <div className="navbar-content">
           <h1 className="navbar-title">Test Smell Rank</h1>
           <div className="navbar-right">
             <span className="user-name">Welcome, {user?.full_name}!</span>
-            <button
-              className="new-project-btn"
-              onClick={() => {
-                setShowModal(true);
-                setModalError("");
-              }}
-            >
-              ➕ New Project
-            </button>
-            <button onClick={handleLogout} className="logout-button">
-              Logout
-            </button>
+            <button onClick={handleLogout} className="logout-button">Logout</button>
           </div>
         </div>
       </nav>
 
-      <div className="dashboard-content">
-        {/* ── Projects Section ─────────────────────────────────── */}
-        <div className="section-header">
-          <h2>My Projects</h2>
-          <p className="section-subtitle">
-            Each project tracks a GitHub repository across multiple analysis
-            runs
-          </p>
-        </div>
-
-        {projectsLoading ? (
-          <div className="loading-container">
-            <div className="spinner"></div>
-            <p>Loading projects…</p>
-          </div>
-        ) : projects.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">🧪</div>
-            <h3>No projects yet</h3>
-            <p>
-              Create your first project to start tracking test smell rankings
-              over time.
-            </p>
+      <div className="dashboard-layout">
+        {/* ── Sidebar ──────────────────────────────────────────── */}
+        <aside className="sidebar">
+          <nav className="sidebar-nav">
             <button
-              className="new-project-btn large"
-              onClick={() => setShowModal(true)}
+              className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}
+              onClick={() => setActiveTab("dashboard")}
             >
-              ➕ Create First Project
+              <span className="sidebar-icon">🏠</span>
+              <span>Dashboard</span>
             </button>
-          </div>
-        ) : (
-          <div className="projects-grid">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="project-card"
-                onClick={() =>
-                  navigate(`/project/${project.id}`, {
-                    state: {
-                      projectName: project.name,
-                      repoUrl: project.repo_url,
-                    },
-                  })
-                }
-              >
-                <div className="project-card-header">
-                  <span className="source-badge github">🔗 GitHub</span>
-                  <button
-                    className="delete-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteConfirm(project.id);
-                    }}
-                    title="Delete project"
-                  >
-                    🗑
+            <button
+              className={`sidebar-item ${activeTab === "quick" ? "active" : ""}`}
+              onClick={() => setActiveTab("quick")}
+            >
+              <span className="sidebar-icon">⚡</span>
+              <span>Quick Analysis</span>
+            </button>
+          </nav>
+        </aside>
+
+        {/* ── Main content ─────────────────────────────────────── */}
+        <main className="main-content">
+
+          {/* ════ DASHBOARD TAB ════ */}
+          {activeTab === "dashboard" && (
+            <div>
+              <div className="content-header">
+                <div>
+                  <h2 className="content-title">My Projects</h2>
+                  <p className="content-subtitle">Track GitHub repositories across multiple analysis runs</p>
+                </div>
+                <button
+                  className="new-project-btn"
+                  onClick={() => { setShowModal(true); setModalError(""); }}
+                >
+                  + New Project
+                </button>
+              </div>
+
+              {projectsLoading ? (
+                <div className="loading-container">
+                  <div className="spinner"></div>
+                  <p>Loading projects…</p>
+                </div>
+              ) : projects.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🧪</div>
+                  <h3>No projects yet</h3>
+                  <p>Create your first project to start tracking test smell rankings over time.</p>
+                  <button className="new-project-btn" style={{ marginTop: 16 }} onClick={() => setShowModal(true)}>
+                    + Create First Project
                   </button>
                 </div>
-                <h3 className="project-card-name">{project.name}</h3>
-                <p className="project-card-url" title={project.repo_url}>
-                  {project.repo_url.replace("https://github.com/", "")}
-                </p>
-                <div className="project-card-footer">
-                  <span className="run-count-badge">
-                    {project.run_count} run{project.run_count !== 1 ? "s" : ""}
-                  </span>
-                  <span className="project-date">
-                    {formatDate(project.created_at)}
-                  </span>
+              ) : (
+                <div className="table-card">
+                  <table className="projects-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Project Name</th>
+                        <th>Repository</th>
+                        <th>Runs</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {projects.map((project, idx) => (
+                        <tr key={project.id}>
+                          <td className="col-index">{idx + 1}</td>
+                          <td className="col-name">
+                            <span className="project-name-cell">{project.name}</span>
+                          </td>
+                          <td className="col-repo">
+                            <a
+                              href={project.repo_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="repo-link"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {project.repo_url.replace("https://github.com/", "")}
+                            </a>
+                          </td>
+                          <td className="col-runs">
+                            <span className="run-count-badge">
+                              {project.run_count} run{project.run_count !== 1 ? "s" : ""}
+                            </span>
+                          </td>
+                          <td className="col-date">{formatDate(project.created_at)}</td>
+                          <td className="col-actions">
+                            <button
+                              className="action-btn view-btn"
+                              title="View project"
+                              onClick={() =>
+                                navigate(`/project/${project.id}`, {
+                                  state: { projectName: project.name, repoUrl: project.repo_url },
+                                })
+                              }
+                            >
+                              👁
+                            </button>
+                            <button
+                              className="action-btn del-btn"
+                              title="Delete project"
+                              onClick={() => setDeleteConfirm(project.id)}
+                            >
+                              🗑
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ════ QUICK ANALYSIS TAB ════ */}
+          {activeTab === "quick" && (
+            <div>
+              <div className="content-header">
+                <div>
+                  <h2 className="content-title">Quick Analysis</h2>
+                  <p className="content-subtitle">One-off ZIP analysis — results are not saved to history</p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
 
-        {/* ── ZIP Quick Analysis ────────────────────────────────── */}
-        <div className="zip-section">
-          <div className="zip-card">
-            <div className="upload-header">
-              <span className="upload-icon">📦</span>
-              <div>
-                <h3>Quick Analysis — ZIP File</h3>
-                <p className="upload-description">
-                  One-off analysis without saving history
+              <div className="quick-card">
+                <div className="quick-card-icon">📦</div>
+                <h3>Upload a ZIP File</h3>
+                <p className="quick-card-desc">
+                  Upload a ZIP containing your Python project. Test smells will be detected and ranked immediately.
+                  Results won't be stored — use <strong>Projects</strong> for tracked history.
                 </p>
+
+                {zipError && <div className="error-message">{zipError}</div>}
+
+                <form onSubmit={handleZipSubmit} className="quick-form">
+                  <div className="file-drop-area">
+                    <input
+                      type="file"
+                      id="zip-input"
+                      className="file-input-hidden"
+                      accept=".zip"
+                      onChange={(e) => setZipFile(e.target.files[0])}
+                      disabled={zipLoading}
+                    />
+                    <label htmlFor="zip-input" className="file-label">
+                      {zipFile ? (
+                        <><span className="file-chosen-icon">✅</span> {zipFile.name}</>
+                      ) : (
+                        <><span className="file-chosen-icon">📁</span> Click to choose a .zip file</>
+                      )}
+                    </label>
+                  </div>
+                  <button type="submit" className="upload-button" disabled={zipLoading || !zipFile}>
+                    {zipLoading ? (
+                      <><span className="btn-spinner-white"></span> Analyzing…</>
+                    ) : (
+                      "⚡ Run Analysis"
+                    )}
+                  </button>
+                </form>
               </div>
             </div>
-            {zipError && <div className="error-message">{zipError}</div>}
-            <form onSubmit={handleZipSubmit} className="zip-form">
-              <input
-                type="file"
-                className="upload-input file-input"
-                accept=".zip"
-                onChange={(e) => setZipFile(e.target.files[0])}
-                disabled={zipLoading}
-              />
-              <button
-                type="submit"
-                className="upload-button"
-                disabled={zipLoading}
-              >
-                {zipLoading ? "Uploading…" : "Analyze ZIP"}
-              </button>
-            </form>
-          </div>
-        </div>
+          )}
+
+        </main>
       </div>
 
       {/* ── New Project Modal ─────────────────────────────────── */}
@@ -264,12 +304,7 @@ const Dashboard = () => {
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Create New Project</h3>
-              <button
-                className="modal-close"
-                onClick={() => setShowModal(false)}
-              >
-                ✕
-              </button>
+              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
             {modalError && <div className="error-message">{modalError}</div>}
             <form onSubmit={handleCreateProject} className="modal-form">
@@ -292,11 +327,7 @@ const Dashboard = () => {
                 onChange={(e) => setNewRepoUrl(e.target.value)}
                 disabled={modalLoading}
               />
-              <button
-                type="submit"
-                className="upload-button"
-                disabled={modalLoading}
-              >
+              <button type="submit" className="upload-button" disabled={modalLoading}>
                 {modalLoading ? "Creating…" : "Create Project"}
               </button>
             </form>
@@ -307,27 +338,12 @@ const Dashboard = () => {
       {/* ── Delete Confirmation ───────────────────────────────── */}
       {deleteConfirm && (
         <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
-          <div
-            className="modal-box confirm-box"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal-box confirm-box" onClick={(e) => e.stopPropagation()}>
             <h3>Delete Project?</h3>
-            <p>
-              This will permanently delete the project and all its run history.
-            </p>
+            <p>This will permanently delete the project and all its run history.</p>
             <div className="confirm-actions">
-              <button
-                className="btn-danger"
-                onClick={() => handleDelete(deleteConfirm)}
-              >
-                Delete
-              </button>
-              <button
-                className="btn-secondary"
-                onClick={() => setDeleteConfirm(null)}
-              >
-                Cancel
-              </button>
+              <button className="btn-danger" onClick={() => handleDelete(deleteConfirm)}>Delete</button>
+              <button className="btn-secondary" onClick={() => setDeleteConfirm(null)}>Cancel</button>
             </div>
           </div>
         </div>
