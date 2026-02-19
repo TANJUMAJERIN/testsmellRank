@@ -4,6 +4,8 @@ from app.services.smell_detection import detect_smells_for_project
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from pydantic import BaseModel
+import os
+import stat
 import shutil
 import zipfile
 import subprocess
@@ -15,6 +17,12 @@ router = APIRouter(prefix="/api/upload", tags=["upload"])
 
 UPLOAD_DIR = Path("uploaded_projects")
 UPLOAD_DIR.mkdir(exist_ok=True)
+
+
+def _force_remove(func, path, _excinfo):
+    """Error handler for shutil.rmtree — removes read-only flag on Windows before retrying."""
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 
 class GithubRepoRequest(BaseModel):
@@ -43,7 +51,7 @@ async def upload_github_repo(
         project_dir = user_dir / repo_name
 
         if project_dir.exists():
-            shutil.rmtree(project_dir)
+            shutil.rmtree(project_dir, onerror=_force_remove)
 
         result = subprocess.run(
             ["git", "clone", repo_url, str(project_dir)],
@@ -87,7 +95,7 @@ async def upload_zip_file(
         project_dir = user_dir / project_name
 
         if project_dir.exists():
-            shutil.rmtree(project_dir)
+            shutil.rmtree(project_dir, onerror=_force_remove)
 
         project_dir.mkdir(exist_ok=True)
 

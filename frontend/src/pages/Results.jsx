@@ -1,52 +1,82 @@
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { getRun } from "../services/api";
 import "./Results.css";
 
 const Results = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { projectId, runId } = useParams();
 
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState(null);
   const [uniqueSmells, setUniqueSmells] = useState([]);
+  const [runMeta, setRunMeta] = useState(null);
 
   const projectData = location.state?.projectData;
+  const stateRunData = location.state?.runData;
 
   useEffect(() => {
-    if (!projectData || !projectData.smell_analysis) {
-      navigate("/dashboard");
+    const processAnalysis = (analysis) => {
+      const smellMap = new Map();
+      analysis.details?.forEach((fileResult) => {
+        fileResult.smells?.forEach((smell) => {
+          const count = smellMap.get(smell.type) || 0;
+          smellMap.set(smell.type, count + 1);
+        });
+      });
+      const uniqueSmellsArray = Array.from(smellMap.entries())
+        .map(([type, count]) => ({ type, count }))
+        .sort((a, b) => b.count - a.count);
+      setUniqueSmells(uniqueSmellsArray);
+      setResults(analysis);
+      setLoading(false);
+    };
+
+    // Case 1: loaded from project run URL (/project/:id/run/:runId)
+    if (projectId && runId) {
+      // If we have fresh run data in state, use it directly (avoids extra API call)
+      if (stateRunData?.smell_analysis) {
+        setRunMeta(stateRunData);
+        processAnalysis(stateRunData.smell_analysis);
+        return;
+      }
+      // Otherwise fetch from API (e.g. when user revisits the URL)
+      getRun(projectId, runId)
+        .then((run) => {
+          setRunMeta(run);
+          if (run.smell_analysis) {
+            processAnalysis(run.smell_analysis);
+          } else {
+            setLoading(false);
+          }
+        })
+        .catch(() => navigate(`/project/${projectId}`));
       return;
     }
 
-    const analysis = projectData.smell_analysis;
-    setResults(analysis);
+    // Case 2: fresh upload via router state (ZIP or one-off GitHub)
+    if (projectData?.smell_analysis) {
+      processAnalysis(projectData.smell_analysis);
+      return;
+    }
 
-    // Calculate unique smell types and their counts
-    const smellMap = new Map();
-    analysis.details?.forEach((fileResult) => {
-      fileResult.smells?.forEach((smell) => {
-        const count = smellMap.get(smell.type) || 0;
-        smellMap.set(smell.type, count + 1);
-      });
-    });
-
-    const uniqueSmellsArray = Array.from(smellMap.entries())
-      .map(([type, count]) => ({ type, count }))
-      .sort((a, b) => b.count - a.count);
-
-    setUniqueSmells(uniqueSmellsArray);
-    setLoading(false);
-  }, [projectData, navigate]);
+    navigate("/dashboard");
+  }, [projectData, stateRunData, projectId, runId, navigate]);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
-  const handleBackToDashboard = () => {
-    navigate("/dashboard");
+  const handleBack = () => {
+    if (projectId) {
+      navigate(`/project/${projectId}`);
+    } else {
+      navigate("/dashboard");
+    }
   };
 
   const getSmellColor = (smellCount) => {
@@ -54,6 +84,10 @@ const Results = () => {
     if (smellCount <= 3) return "#ff9800"; // orange
     return "#f44336"; // red
   };
+
+  const displayName = runMeta
+    ? `Run #${runMeta.run_number}`
+    : projectData?.project_name || null;
 
   return (
     <div className="results-container">
@@ -71,14 +105,14 @@ const Results = () => {
 
       <div className="results-content">
         <div className="results-header">
-          <button onClick={handleBackToDashboard} className="back-button">
-            ← Back to Dashboard
+          <button onClick={handleBack} className="back-button">
+            ← {projectId ? "Back to Project" : "Back to Dashboard"}
           </button>
           <h2>Test Smell Detection Results</h2>
 
-          {projectData?.project_name && (
+          {displayName && (
             <p className="project-name">
-              Project: <strong>{projectData.project_name}</strong>
+              <strong>{displayName}</strong>
             </p>
           )}
         </div>

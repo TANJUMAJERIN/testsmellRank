@@ -64,14 +64,41 @@ export const uploadZipFile = async (file) => {
   return response.data;
 };
 
-export const listUserProjects = async () => {
-  const response = await api.get("/upload/projects");
+// ── Project management ──────────────────────────────────────────
+export const createProject = async (name, repoUrl) => {
+  const response = await api.post("/projects/", { name, repo_url: repoUrl });
   return response.data;
 };
 
-export const detectTestSmells = async (projectPath) => {
-  const response = await api.post("/upload/detect-smells", {
-    project_path: projectPath,
+export const listProjects = async () => {
+  const response = await api.get("/projects/");
+  return response.data;
+};
+
+export const deleteProject = async (projectId) => {
+  const response = await api.delete(`/projects/${projectId}`);
+  return response.data;
+};
+
+// ── Run management ───────────────────────────────────────────────
+export const triggerRun = async (projectId) => {
+  const response = await api.post(`/projects/${projectId}/runs`);
+  return response.data;
+};
+
+export const listRuns = async (projectId) => {
+  const response = await api.get(`/projects/${projectId}/runs`);
+  return response.data;
+};
+
+export const getRun = async (projectId, runId) => {
+  const response = await api.get(`/projects/${projectId}/runs/${runId}`);
+  return response.data;
+};
+
+export const compareRuns = async (projectId, run1Id, run2Id) => {
+  const response = await api.get(`/projects/${projectId}/compare`, {
+    params: { run1: run1Id, run2: run2Id },
   });
   return response.data;
 };
