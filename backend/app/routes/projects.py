@@ -222,6 +222,33 @@ async def list_runs(
 
 
 # ===============================
+# Delete a single run
+# ===============================
+@router.delete("/{project_id}/runs/{run_id}")
+async def delete_run(
+    project_id: str,
+    run_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        project_oid = ObjectId(project_id)
+        run_oid = ObjectId(run_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid ID")
+
+    project = await projects_collection.find_one({"_id": project_oid, "user_id": current_user["_id"]})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    run = await runs_collection.find_one({"_id": run_oid, "project_id": project_oid})
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    await runs_collection.delete_one({"_id": run_oid})
+    return {"message": "Run deleted"}
+
+
+# ===============================
 # Get single run with full analysis
 # ===============================
 @router.get("/{project_id}/runs/{run_id}")

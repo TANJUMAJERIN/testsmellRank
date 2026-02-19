@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { listRuns, triggerRun } from "../services/api";
+import { listRuns, triggerRun, deleteRun } from "../services/api";
 import "./ProjectDetail.css";
 
 const ProjectDetail = () => {
@@ -18,6 +18,7 @@ const ProjectDetail = () => {
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState("");
   const [selectedRuns, setSelectedRuns] = useState([]); // max 2 run IDs for comparison
+  const [deleteRunConfirm, setDeleteRunConfirm] = useState(null); // run id pending delete
 
   useEffect(() => {
     fetchRuns();
@@ -63,6 +64,18 @@ const ProjectDetail = () => {
       if (prev.length >= 2) return [prev[1], runId]; // shift out oldest
       return [...prev, runId];
     });
+  };
+
+  const handleDeleteRun = async (runId) => {
+    try {
+      await deleteRun(projectId, runId);
+      setRuns((prev) => prev.filter((r) => r.id !== runId));
+      setSelectedRuns((prev) => prev.filter((id) => id !== runId));
+    } catch {
+      // silent
+    } finally {
+      setDeleteRunConfirm(null);
+    }
   };
 
   const handleCompare = () => {
@@ -229,7 +242,7 @@ const ProjectDetail = () => {
                     <td>{statusChip(run.status)}</td>
                     <td>{run.summary?.total_files ?? "—"}</td>
                     <td>{run.summary?.total_smells ?? "—"}</td>
-                    <td>
+                    <td className="action-cell">
                       {run.status === "completed" && (
                         <button
                           className="view-btn"
@@ -245,6 +258,13 @@ const ProjectDetail = () => {
                           Failed
                         </span>
                       )}
+                      <button
+                        className="del-run-btn"
+                        title="Delete run"
+                        onClick={() => setDeleteRunConfirm(run.id)}
+                      >
+                        🗑
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -253,6 +273,35 @@ const ProjectDetail = () => {
           </div>
         )}
       </div>
+      {/* ── Delete Run Confirmation ───────────────────────────────── */}
+      {deleteRunConfirm && (
+        <div
+          className="modal-overlay"
+          onClick={() => setDeleteRunConfirm(null)}
+        >
+          <div
+            className="modal-box confirm-box"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3>Delete Run?</h3>
+            <p>This will permanently delete this run and its results.</p>
+            <div className="confirm-actions">
+              <button
+                className="btn-danger"
+                onClick={() => handleDeleteRun(deleteRunConfirm)}
+              >
+                Delete
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => setDeleteRunConfirm(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

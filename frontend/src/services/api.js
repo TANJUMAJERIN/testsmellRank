@@ -91,6 +91,11 @@ export const listRuns = async (projectId) => {
   return response.data;
 };
 
+export const deleteRun = async (projectId, runId) => {
+  const response = await api.delete(`/projects/${projectId}/runs/${runId}`);
+  return response.data;
+};
+
 export const getRun = async (projectId, runId) => {
   const response = await api.get(`/projects/${projectId}/runs/${runId}`);
   return response.data;

@@ -82,12 +82,7 @@ const Compare = () => {
 
       <div className="compare-content">
         <div className="compare-header">
-          <button
-            className="back-button"
-            onClick={() => navigate(`/project/${projectId}`)}
-          >
-            ← Back to Project
-          </button>
+          
           <h2>Run Comparison</h2>
         </div>
 
