@@ -226,9 +226,7 @@
   transition: background 0.15s, transform 0.15s;
   line-height: 1;
 }
-.action-btn:hover { transform: scale(1.15); }
-.action-btn.view-btn:hover { background: #eef0ff; }
-.action-btn.del-btn:hover  { background: #fde8e8; }
+
 
 /* ── Empty state ───────────────────────────────────────────────── */
 .empty-state {
@@ -261,6 +259,31 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Quick Analysis ────────────────────────────────────────────── */
+
+/* Mode toggle */
+.quick-mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.quick-mode-btn {
+  padding: 10px 24px;
+  border: 2px solid #dde1f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.quick-mode-btn:hover { border-color: #667eea; color: #667eea; }
+.quick-mode-btn.active {
+  border-color: #667eea;
+  background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+  color: #667eea;
+}
+
 .quick-card {
   background: #fff;
   border-radius: 16px;
