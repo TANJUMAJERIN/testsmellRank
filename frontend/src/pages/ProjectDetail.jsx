@@ -1,56 +1,97 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { listRuns, triggerRun, deleteRun } from "../services/api";
+import { projectsAPI } from "../services/api";
 import "./ProjectDetail.css";
 
 const ProjectDetail = () => {
+  const { projectId } = useParams();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { projectId } = useParams();
   const location = useLocation();
 
-  const projectName = location.state?.projectName || "Project";
-  const repoUrl = location.state?.repoUrl || "";
-
+  const [project, setProject] = useState(null);
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [running, setRunning] = useState(false);
-  const [runError, setRunError] = useState("");
-  const [selectedRuns, setSelectedRuns] = useState([]); // max 2 run IDs for comparison
-  const [deleteRunConfirm, setDeleteRunConfirm] = useState(null); // run id pending delete
+  const [runLoading, setRunLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [selectedRuns, setSelectedRuns] = useState([]);
+  const [deleteRunConfirm, setDeleteRunConfirm] = useState(null);
 
   useEffect(() => {
-    fetchRuns();
+    fetchData();
   }, [projectId]);
 
-  const fetchRuns = async () => {
+  const fetchData = async () => {
     try {
-      const data = await listRuns(projectId);
-      setRuns(data);
-      // Derive project name from state if available (passed via navigate)
-    } catch {
-      navigate("/dashboard");
+      setLoading(true);
+      const [projectsData, runsData] = await Promise.all([
+        projectsAPI.list(),
+        projectsAPI.listRuns(projectId),
+      ]);
+      const proj = projectsData.find((p) => p.id === projectId);
+      setProject(proj || null);
+      setRuns(runsData);
+    } catch (err) {
+      setError("Failed to load project data");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRunAnalysis = async () => {
-    setRunning(true);
-    setRunError("");
+  const handleTriggerRun = async () => {
+    setRunLoading(true);
+    setError("");
     try {
-      const run = await triggerRun(projectId);
-      // Navigate directly to results of the new run
-      navigate(`/project/${projectId}/run/${run.id}`, {
-        state: { runData: run },
+      const run = await projectsAPI.triggerRun(projectId);
+      setRuns((prev) => [run, ...prev]);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Analysis failed. Please try again.");
+    } finally {
+      setRunLoading(false);
+    }
+  };
+
+  const handleDeleteRun = async (runId) => {
+    try {
+      await projectsAPI.deleteRun(projectId, runId);
+      setRuns((prev) => prev.filter((r) => r.id !== runId));
+      setSelectedRuns((prev) => prev.filter((id) => id !== runId));
+    } catch {
+      setError("Failed to delete run");
+    } finally {
+      setDeleteRunConfirm(null);
+    }
+  };
+
+  const handleViewRun = async (runId) => {
+    try {
+      const run = await projectsAPI.getRun(projectId, runId);
+      navigate("/results", {
+        state: {
+          projectData: {
+            ...run,
+            smell_analysis: run.smell_analysis,
+            project_name: project?.name,
+          },
+        },
       });
     } catch (err) {
-      setRunError(
-        err.response?.data?.detail || "Analysis failed. Please try again.",
-      );
-      setRunning(false);
+      setError("Failed to load run details");
     }
+  };
+
+  const toggleSelectRun = (runId) => {
+    setSelectedRuns((prev) => {
+      if (prev.includes(runId)) return prev.filter((id) => id !== runId);
+      if (prev.length >= 2) return [prev[1], runId];
+      return [...prev, runId];
+    });
+  };
+
+  const handleCompare = () => {
+    if (selectedRuns.length !== 2) return;
+    navigate(`/project/${projectId}/compare?run1=${selectedRuns[0]}&run2=${selectedRuns[1]}`);
   };
 
   const handleLogout = () => {
@@ -58,35 +99,8 @@ const ProjectDetail = () => {
     navigate("/login");
   };
 
-  const toggleSelectRun = (runId) => {
-    setSelectedRuns((prev) => {
-      if (prev.includes(runId)) return prev.filter((id) => id !== runId);
-      if (prev.length >= 2) return [prev[1], runId]; // shift out oldest
-      return [...prev, runId];
-    });
-  };
-
-  const handleDeleteRun = async (runId) => {
-    try {
-      await deleteRun(projectId, runId);
-      setRuns((prev) => prev.filter((r) => r.id !== runId));
-      setSelectedRuns((prev) => prev.filter((id) => id !== runId));
-    } catch {
-      // silent
-    } finally {
-      setDeleteRunConfirm(null);
-    }
-  };
-
-  const handleCompare = () => {
-    if (selectedRuns.length !== 2) return;
-    navigate(
-      `/project/${projectId}/compare?run1=${selectedRuns[0]}&run2=${selectedRuns[1]}`,
-    );
-  };
-
   const formatDate = (dateStr) => {
-    if (!dateStr) return "—";
+    if (!dateStr) return "";
     return new Date(dateStr).toLocaleString(undefined, {
       year: "numeric",
       month: "short",
@@ -99,16 +113,18 @@ const ProjectDetail = () => {
   const statusChip = (status) => {
     const map = {
       completed: { label: "Completed", cls: "status-completed" },
-      pending: { label: "Pending", cls: "status-pending" },
-      failed: { label: "Failed", cls: "status-failed" },
+      pending:   { label: "Pending",   cls: "status-pending"   },
+      failed:    { label: "Failed",    cls: "status-failed"    },
     };
     const s = map[status] || { label: status, cls: "" };
     return <span className={`status-chip ${s.cls}`}>{s.label}</span>;
   };
 
+  const projectName = project?.name || location.state?.projectName || "Project";
+  const repoUrl = project?.repo_url || location.state?.repoUrl || "";
+
   return (
     <div className="pd-container">
-      {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-content">
           <h1 className="navbar-title">Test Smell Rank</h1>
@@ -122,13 +138,9 @@ const ProjectDetail = () => {
       </nav>
 
       <div className="pd-content">
-        {/* Header */}
         <div className="pd-header">
-          <button
-            className="back-button"
-            onClick={() => navigate("/dashboard")}
-          >
-            ← Back to Dashboard
+          <button className="back-button" onClick={() => navigate("/dashboard")}>
+            Back to Dashboard
           </button>
           <div className="pd-title-row">
             <div>
@@ -140,31 +152,25 @@ const ProjectDetail = () => {
             </div>
             <button
               className="run-btn"
-              onClick={handleRunAnalysis}
-              disabled={running}
+              onClick={handleTriggerRun}
+              disabled={runLoading}
             >
-              {running ? (
-                <>
-                  <span className="btn-spinner"></span> Analyzing…
-                </>
+              {runLoading ? (
+                <><span className="btn-spinner"></span> Analyzing</>
               ) : (
-                "🔄 Run Analysis"
+                "Run Analysis"
               )}
             </button>
           </div>
-          {running && (
+          {runLoading && (
             <div className="run-progress">
               <div className="spinner"></div>
-              <p>
-                Cloning repository and analyzing test smells… this may take a
-                minute.
-              </p>
+              <p>Cloning repository and analyzing test smells this may take a minute.</p>
             </div>
           )}
-          {runError && <div className="error-message">{runError}</div>}
+          {error && <div className="error-message">{error}</div>}
         </div>
 
-        {/* Comparison bar */}
         {selectedRuns.length > 0 && (
           <div className="compare-bar">
             <span>
@@ -175,7 +181,7 @@ const ProjectDetail = () => {
             <div className="compare-bar-actions">
               {selectedRuns.length === 2 && (
                 <button className="compare-btn" onClick={handleCompare}>
-                  ⚖️ Compare
+                  Compare
                 </button>
               )}
               <button className="clear-btn" onClick={() => setSelectedRuns([])}>
@@ -185,26 +191,20 @@ const ProjectDetail = () => {
           </div>
         )}
 
-        {/* Runs table */}
         {loading ? (
           <div className="loading-container">
             <div className="spinner"></div>
-            <p>Loading runs…</p>
+            <p>Loading runs</p>
           </div>
         ) : runs.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-icon">📊</div>
+            <div className="empty-icon"></div>
             <h3>No runs yet</h3>
-            <p>
-              Click "Run Analysis" to perform the first analysis of this
-              repository.
-            </p>
+            <p>Click "Run Analysis" to perform the first analysis of this repository.</p>
           </div>
         ) : (
           <div className="runs-table-wrapper">
-            <p className="compare-hint">
-              Tick two checkboxes to compare runs side by side.
-            </p>
+            <p className="compare-hint">Tick two checkboxes to compare runs side by side.</p>
             <table className="runs-table">
               <thead>
                 <tr>
@@ -219,12 +219,7 @@ const ProjectDetail = () => {
               </thead>
               <tbody>
                 {runs.map((run) => (
-                  <tr
-                    key={run.id}
-                    className={
-                      selectedRuns.includes(run.id) ? "row-selected" : ""
-                    }
-                  >
+                  <tr key={run.id} className={selectedRuns.includes(run.id) ? "row-selected" : ""}>
                     <td>
                       {run.status === "completed" && (
                         <input
@@ -235,35 +230,26 @@ const ProjectDetail = () => {
                         />
                       )}
                     </td>
-                    <td>
-                      <span className="run-number">#{run.run_number}</span>
-                    </td>
+                    <td><span className="run-number">#{run.run_number}</span></td>
                     <td className="run-date">{formatDate(run.created_at)}</td>
                     <td>{statusChip(run.status)}</td>
-                    <td>{run.summary?.total_files ?? "—"}</td>
-                    <td>{run.summary?.total_smells ?? "—"}</td>
+                    <td>{run.summary?.total_files ?? ""}</td>
+                    <td>{run.summary?.total_smells ?? ""}</td>
                     <td className="action-cell">
                       {run.status === "completed" && (
-                        <button
-                          className="view-btn"
-                          onClick={() =>
-                            navigate(`/project/${projectId}/run/${run.id}`)
-                          }
-                        >
+                        <button className="view-btn" onClick={() => handleViewRun(run.id)}>
                           View Results
                         </button>
                       )}
                       {run.status === "failed" && (
-                        <span className="error-hint" title={run.error}>
-                          Failed
-                        </span>
+                        <span className="error-hint" title={run.error}>Failed</span>
                       )}
                       <button
                         className="del-run-btn"
                         title="Delete run"
                         onClick={() => setDeleteRunConfirm(run.id)}
                       >
-                        🗑
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -273,29 +259,17 @@ const ProjectDetail = () => {
           </div>
         )}
       </div>
-      {/* ── Delete Run Confirmation ───────────────────────────────── */}
+
       {deleteRunConfirm && (
-        <div
-          className="modal-overlay"
-          onClick={() => setDeleteRunConfirm(null)}
-        >
-          <div
-            className="modal-box confirm-box"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="modal-overlay" onClick={() => setDeleteRunConfirm(null)}>
+          <div className="modal-box confirm-box" onClick={(e) => e.stopPropagation()}>
             <h3>Delete Run?</h3>
             <p>This will permanently delete this run and its results.</p>
             <div className="confirm-actions">
-              <button
-                className="btn-danger"
-                onClick={() => handleDeleteRun(deleteRunConfirm)}
-              >
+              <button className="btn-danger" onClick={() => handleDeleteRun(deleteRunConfirm)}>
                 Delete
               </button>
-              <button
-                className="btn-secondary"
-                onClick={() => setDeleteRunConfirm(null)}
-              >
+              <button className="btn-secondary" onClick={() => setDeleteRunConfirm(null)}>
                 Cancel
               </button>
             </div>

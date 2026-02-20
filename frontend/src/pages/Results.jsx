@@ -216,7 +216,7 @@ const Results = () => {
                     <div className="git-stat-item">
                       <span className="stat-label">Fault Rate:</span>
                       <span className="stat-value">
-                        {results.git_metrics.statistics.fault_percentage}%
+                        {results.git_metrics.statistics.fault_commit_pct}%
                       </span>
                     </div>
                   </div>

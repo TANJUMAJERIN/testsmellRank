@@ -1,489 +1,526 @@
 # app/services/git_metrics.py
 
 """
-Git-based metrics calculation for test smell prioritization
-Calculates Change Proneness (CP) and Fault Proneness (FP) from Git history
-Based on research paper methodology
+Git-based metrics calculation for test smell prioritization.
+
+Implements EXACTLY the methodology from:
+"Prioritizing Test Smells: An Empirical Evaluation of Quality Metrics
+and Developer Perceptions" (ICSME 2025)
+
+Metrics computed:
+  ChgFreq  = (Prod_Changes / Prod_TotalCommits) + (Test_Changes / Test_TotalCommits)
+  ChgExt   = (Prod_CodeChurn / Prod_TotalCommits) + (Test_CodeChurn / Test_TotalCommits)
+  FaultFreq = (Prod_FaultyChanges / Prod_TotalCommits) + (Test_FaultyChanges / Test_TotalCommits)
+  FaultExt  = (Prod_FaultyChurn / Prod_TotalCommits) + (Test_FaultyChurn / Test_TotalCommits)
+
+  CP(S) = rho(smell_presence, ChgFreq)  + rho(smell_presence, ChgExt)
+  FP(S) = rho(smell_presence, FaultFreq) + rho(smell_presence, FaultExt)
+  PS(S) = (CP(S) + FP(S)) / 2
+
+Where rho is Spearman rank correlation coefficient, computed across all
+test files in the repository (one data point per file).
 """
 
 import subprocess
-import re
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional, Set
 from collections import defaultdict
-from scipy.stats import spearmanr
+
 import numpy as np
+from scipy.stats import spearmanr
 
 
 # =====================================================
-# FAULT-FIXING COMMIT IDENTIFICATION
+# CONSTANTS
 # =====================================================
+
 FAULT_KEYWORDS = [
-    'bug', 'fix', 'error', 'defect', 'issue', 'fault', 
-    'crash', 'patch', 'repair', 'correct', 'resolve'
+    'bug', 'fix', 'error', 'defect', 'issue', 'fault',
+    'crash', 'patch', 'repair', 'correct', 'resolve',
 ]
 
 
-def is_faulty_commit(commit_message: str) -> bool:
-    """Check if a commit message indicates a bug fix"""
-    message_lower = commit_message.lower()
-    return any(keyword in message_lower for keyword in FAULT_KEYWORDS)
-
-
 # =====================================================
-# GIT HISTORY EXTRACTION
+# STEP 1 - GIT HISTORY EXTRACTION
 # =====================================================
+
 def extract_git_history(repo_path: Path) -> List[Dict]:
     """
-    Extract commit history from a Git repository
-    
-    Returns list of commits with:
-    - hash: commit hash
-    - message: commit message
-    - timestamp: commit date
-    - files_changed: dict of {filename: {'additions': int, 'deletions': int}}
-    - is_faulty: whether this is a bug-fix commit
+    Extract full commit history from a Git repository using --numstat.
+
+    Each commit dict:
+    {
+        'hash':          str,
+        'message':       str,
+        'timestamp':     str,
+        'is_faulty':     bool,
+        'files_changed': { filename: {'additions': int, 'deletions': int} }
+    }
     """
     commits = []
-    
+
     try:
-        # Check if it's a git repository
-        git_check = subprocess.run(
+        check = subprocess.run(
             ['git', 'rev-parse', '--git-dir'],
-            cwd=repo_path,
-            capture_output=True,
-            text=True,
-            timeout=5
+            cwd=repo_path, capture_output=True, text=True, timeout=10
         )
-        
-        if git_check.returncode != 0:
-            print(f"Not a git repository: {repo_path}")
+        if check.returncode != 0:
+            print(f"[ERROR] Not a git repository: {repo_path}")
             return []
-        
-        # Get all commits with numstat (shows file changes)
+
         result = subprocess.run(
             ['git', 'log', '--numstat', '--format=%H|%s|%ai', '--no-merges'],
-            cwd=repo_path,
-            capture_output=True,
-            text=True,
-            timeout=60
+            cwd=repo_path, capture_output=True, text=True, timeout=120
         )
-        
         if result.returncode != 0:
-            print(f"Git log failed: {result.stderr}")
+            print(f"[ERROR] git log failed: {result.stderr}")
             return []
-        
-        # Parse the output
-        lines = result.stdout.strip().split('\n')
-        current_commit = None
-        
-        for line in lines:
-            if '|' in line and not line.startswith('\t'):
-                # This is a commit header line
+
+        current_commit: Optional[Dict] = None
+
+        for line in result.stdout.strip().split('\n'):
+            line = line.rstrip()
+
+            # Commit header line: "HASH|subject|date"
+            if '|' in line and not line[0].isdigit() and line[0] != '-':
                 if current_commit:
                     commits.append(current_commit)
-                
-                parts = line.split('|')
-                if len(parts) >= 3:
-                    commit_hash = parts[0]
-                    message = parts[1]
-                    timestamp = parts[2]
-                    
-                    current_commit = {
-                        'hash': commit_hash,
-                        'message': message,
-                        'timestamp': timestamp,
-                        'files_changed': {},
-                        'is_faulty': is_faulty_commit(message)
-                    }
-            elif line.strip() and current_commit:
-                # This is a file change line (numstat format: additions deletions filename)
-                parts = line.strip().split('\t')
+                parts = line.split('|', 2)
                 if len(parts) == 3:
-                    additions = parts[0]
-                    deletions = parts[1]
-                    filename = parts[2]
-                    
-                    # Convert to int, handle binary files (marked as '-')
-                    add_count = 0 if additions == '-' else int(additions)
-                    del_count = 0 if deletions == '-' else int(deletions)
-                    
-                    current_commit['files_changed'][filename] = {
-                        'additions': add_count,
-                        'deletions': del_count
+                    current_commit = {
+                        'hash':          parts[0].strip(),
+                        'message':       parts[1].strip(),
+                        'timestamp':     parts[2].strip(),
+                        'is_faulty':     _is_faulty_commit(parts[1]),
+                        'files_changed': {},
                     }
-        
-        # Add the last commit
+
+            # Numstat file line: "additions<TAB>deletions<TAB>filename"
+            elif line and current_commit and '\t' in line:
+                parts = line.split('\t')
+                if len(parts) == 3:
+                    add_str, del_str, filename = parts
+                    additions = 0 if add_str == '-' else int(add_str)
+                    deletions = 0 if del_str == '-' else int(del_str)
+                    current_commit['files_changed'][filename] = {
+                        'additions': additions,
+                        'deletions': deletions,
+                    }
+
         if current_commit:
             commits.append(current_commit)
-        
-        print(f"Extracted {len(commits)} commits from {repo_path}")
-        
-    except Exception as e:
-        print(f"Error extracting git history: {e}")
+
+    except Exception as exc:
+        print(f"[ERROR] extract_git_history: {exc}")
         return []
-    
+
+    print(f"[GIT] Extracted {len(commits)} commits from {repo_path.name}")
     return commits
 
 
+def _is_faulty_commit(message: str) -> bool:
+    """Return True if the commit message indicates a bug fix."""
+    msg = message.lower()
+    return any(kw in msg for kw in FAULT_KEYWORDS)
+
+
 # =====================================================
-# FILE CLASSIFICATION
+# STEP 2 - FILE CLASSIFICATION
 # =====================================================
-def normalize_path(path: str) -> str:
-    """Normalize file path for matching between git and smell detection"""
-    # Convert backslashes to forward slashes
-    path = path.replace('\\', '/')
-    # Remove common prefixes that might differ
-    path = path.replace('test file/', '')
-    return path
-
-
-def paths_match(smell_file_path: str, git_file_path: str) -> bool:
-    """Check if two file paths refer to the same file"""
-    norm_smell = normalize_path(smell_file_path).lower()
-    norm_git = normalize_path(git_file_path).lower()
-    
-    # Exact match after normalization
-    if norm_smell == norm_git:
-        return True
-    
-    # Check if one ends with the other (handles different root paths)
-    if norm_smell.endswith(norm_git) or norm_git.endswith(norm_smell):
-        return True
-    
-    # Check filename match as last resort
-    smell_filename = norm_smell.split('/')[-1]
-    git_filename = norm_git.split('/')[-1]
-    if smell_filename == git_filename and smell_filename.startswith('test'):
-        return True
-    
-    return False
-
 
 def is_test_file(filename: str) -> bool:
-    """Check if a file is a test file"""
-    filename_lower = filename.lower()
+    """Return True if filename looks like a test file."""
+    f = filename.lower().replace('\\', '/')
     return (
-        'test_' in filename_lower or 
-        '_test.' in filename_lower or
-        '/tests/' in filename_lower or
-        '\\tests\\' in filename_lower or
-        filename_lower.startswith('test')
+        '/test_'   in f or
+        '_test.'   in f or
+        '/tests/'  in f or
+        f.startswith('test_') or
+        f.startswith('tests/')
     )
 
 
 def is_production_file(filename: str) -> bool:
-    """Check if a file is a production Python file"""
+    """Return True if filename is a non-test Python source file."""
+    f = filename.lower()
     return (
-        filename.endswith('.py') and 
-        not is_test_file(filename) and
-        not filename.endswith('__init__.py')
+        f.endswith('.py') and
+        not is_test_file(f) and
+        not f.endswith('__init__.py') and
+        'setup.py' not in f
     )
 
 
-# =====================================================
-# METRIC CALCULATION
-# =====================================================
-def calculate_file_metrics(commits: List[Dict]) -> Dict[str, Dict]:
-    """
-    Calculate metrics for each file
-    
-    Returns dict: {
-        filename: {
-            'total_changes': int,
-            'total_churn': int,
-            'faulty_changes': int,
-            'faulty_churn': int
-        }
-    }
-    """
-    file_metrics = defaultdict(lambda: {
-        'total_changes': 0,
-        'total_churn': 0,
-        'faulty_changes': 0,
-        'faulty_churn': 0
-    })
-    
-    for commit in commits:
-        is_faulty = commit['is_faulty']
-        
-        for filename, changes in commit['files_changed'].items():
-            additions = changes['additions']
-            deletions = changes['deletions']
-            churn = additions + deletions
-            
-            # Update metrics
-            file_metrics[filename]['total_changes'] += 1
-            file_metrics[filename]['total_churn'] += churn
-            
-            if is_faulty:
-                file_metrics[filename]['faulty_changes'] += 1
-                file_metrics[filename]['faulty_churn'] += churn
-    
-    return dict(file_metrics)
+def _normalize(path: str) -> str:
+    return path.replace('\\', '/').lower().strip('/')
 
 
-def calculate_smell_metrics(
-    smell_instances: List[Dict], 
-    commits: List[Dict]
-) -> Dict[str, Dict]:
+def paths_match(smell_path: str, git_path: str) -> bool:
+    """Flexible path matcher handling different root prefixes."""
+    a = _normalize(smell_path)
+    b = _normalize(git_path)
+    if a == b:
+        return True
+    if a.endswith(b) or b.endswith(a):
+        return True
+    fa, fb = a.split('/')[-1], b.split('/')[-1]
+    return fa == fb and fa.startswith('test')
+
+
+# =====================================================
+# STEP 3 - RAW FILE METRICS FROM GIT
+# =====================================================
+
+def _build_file_metrics(commits: List[Dict]) -> Dict[str, Dict]:
     """
-    Calculate CP and FP metrics for each smell type
-    
-    smell_instances format:
-    [
-        {
-            'type': 'Conditional Test Logic',
-            'file': 'tests/test_module.py',
-            'line': 45,
-            // ... other smell data
-        }
-    ]
-    
+    Aggregate per-file commit statistics from the full history.
+
     Returns:
-    {
-        'smell_type': {
-            'change_frequency': float,
-            'change_extent': float,
-            'fault_frequency': float,
-            'fault_extent': float,
-            'cp_score': float,
-            'fp_score': float,
-            'prioritization_score': float,
-            'test_files': [list of test files with this smell],
-            'instance_count': int
-        }
-    }
+        { filename: {
+            'total_changes':  int,
+            'total_churn':    int,
+            'faulty_changes': int,
+            'faulty_churn':   int,
+        }}
     """
-    # Group smells by type
-    smells_by_type = defaultdict(list)
-    for smell in smell_instances:
-        smells_by_type[smell['type']].append(smell)
-    
-    # Calculate file metrics from commits
-    file_metrics = calculate_file_metrics(commits)
-    
-    # Separate production and test files
-    prod_files = {f for f in file_metrics.keys() if is_production_file(f)}
-    test_files = {f for f in file_metrics.keys() if is_test_file(f)}
-    
-    # Calculate total commits for normalization (using test files only)
-    test_total_commits = sum(file_metrics[f]['total_changes'] for f in test_files)
-    
-    if test_total_commits == 0:
-        print("Warning: No test file commits found")
-        return {}
-    
-    print(f"📊 Found {len(test_files)} test files in git history")
-    print(f"📊 Total test file commits: {test_total_commits}")
-    
-    if len(test_files) > 0:
-        print(f"📊 Git test files sample: {list(test_files)[:5]}")
-    
-    # Get all unique smell files
-    all_smell_files = set(inst['file'] for instances in smells_by_type.values() for inst in instances)
-    print(f"📊 Test files with smells: {len(all_smell_files)}")
-    if len(all_smell_files) > 0:
-        print(f"📊 Smell files sample: {list(all_smell_files)[:5]}")
-    
-    results = {}
-    
-    for smell_type, instances in smells_by_type.items():
-        # Get test files containing this smell
-        smell_test_files = set(inst['file'] for inst in instances)
-        
-        # Calculate metrics for test files with this smell
-        test_changes = 0
-        test_churn = 0
-        test_faulty_changes = 0
-        test_faulty_churn = 0
-        matched_git_files = []
-        
-        # Aggregate metrics for test files with this smell ONLY
-        # Use path matching to handle different path formats
-        for smell_file in smell_test_files:
-            # Find matching file in git metrics
-            for git_file, metrics in file_metrics.items():
-                if paths_match(smell_file, git_file):
-                    test_changes += metrics['total_changes']
-                    test_churn += metrics['total_churn']
-                    test_faulty_changes += metrics['faulty_changes']
-                    test_faulty_churn += metrics['faulty_churn']
-                    matched_git_files.append(git_file)
-                    break  # Only match once per smell file
-        
-        # Calculate normalized metrics (using only test files)
-        # Normalize by the total number of smell instances to get per-smell metrics
-        num_instances = len(instances)
-        
-        change_frequency = (test_changes / test_total_commits) if test_total_commits > 0 else 0
-        change_extent = (test_churn / test_total_commits) if test_total_commits > 0 else 0
-        fault_frequency = (test_faulty_changes / test_total_commits) if test_total_commits > 0 else 0
-        fault_extent = (test_faulty_churn / test_total_commits) if test_total_commits > 0 else 0
-        
-        # For now, use simple sum for CP and FP
-        # In full implementation, would calculate Spearman correlation
-        cp_score = change_frequency + change_extent
-        fp_score = fault_frequency + fault_extent
-        prioritization_score = (cp_score + fp_score) / 2
-        
-        print(f"  {smell_type}: {num_instances} instances in {len(smell_test_files)} files")
-        print(f"    Matched {len(matched_git_files)}/{len(smell_test_files)} files in git history")
-        if matched_git_files:
-            print(f"    Total commits: {test_changes}")
-        print(f"    CP={cp_score:.4f} (ChgFreq={change_frequency:.4f}, ChgExt={change_extent:.4f})")
-        print(f"    FP={fp_score:.4f} (FaultFreq={fault_frequency:.4f}, FaultExt={fault_extent:.4f})")
-        
-        results[smell_type] = {
-            'change_frequency': round(change_frequency, 4),
-            'change_extent': round(change_extent, 4),
-            'fault_frequency': round(fault_frequency, 4),
-            'fault_extent': round(fault_extent, 4),
-            'cp_score': round(cp_score, 4),
-            'fp_score': round(fp_score, 4),
-            'prioritization_score': round(prioritization_score, 4),
-            'test_files': list(smell_test_files),
-            'instance_count': len(instances)
-        }
-    
-    return results
+    metrics: Dict[str, Dict] = defaultdict(lambda: {
+        'total_changes':  0,
+        'total_churn':    0,
+        'faulty_changes': 0,
+        'faulty_churn':   0,
+    })
+
+    for commit in commits:
+        for filename, change in commit['files_changed'].items():
+            churn = change['additions'] + change['deletions']
+            metrics[filename]['total_changes']  += 1
+            metrics[filename]['total_churn']    += churn
+            if commit['is_faulty']:
+                metrics[filename]['faulty_changes'] += 1
+                metrics[filename]['faulty_churn']   += churn
+
+    return dict(metrics)
 
 
 # =====================================================
-# ADVANCED CORRELATION-BASED CALCULATION
+# STEP 4 - CO-CHANGE MAPPING (test file -> production files)
 # =====================================================
-def calculate_correlations(
-    smell_instances: List[Dict],
+
+def _build_cochange_map(
+    test_files: List[str],
+    commits: List[Dict],
+) -> Dict[str, Set[str]]:
+    """
+    For each test file, find all production files committed together with it
+    (co-change pattern from the paper).
+
+    Returns:
+        { test_file: set(prod_file, ...) }
+    """
+    cochange: Dict[str, Set[str]] = defaultdict(set)
+
+    for commit in commits:
+        changed = list(commit['files_changed'].keys())
+        changed_test = [f for f in changed if is_test_file(f)]
+        changed_prod = [f for f in changed if is_production_file(f)]
+
+        if not changed_test or not changed_prod:
+            continue
+
+        for tf in changed_test:
+            for canonical_tf in test_files:
+                if paths_match(canonical_tf, tf):
+                    for pf in changed_prod:
+                        cochange[canonical_tf].add(pf)
+                    break
+
+    return dict(cochange)
+
+
+# =====================================================
+# STEP 5 - COMBINED METRIC VECTORS (paper formulas 1-4)
+# =====================================================
+
+def _build_combined_vectors(
+    test_files: List[str],
     file_metrics: Dict[str, Dict],
-    all_test_files: List[str]
+    cochange_map: Dict[str, Set[str]],
+    total_commits: int,
+) -> Dict[str, Dict[str, float]]:
+    """
+    For every test file compute the four combined metrics (equations 1-4):
+
+    ChgFreq(file)  = Prod_Changes/N + Test_Changes/N
+    ChgExt(file)   = Prod_Churn/N   + Test_Churn/N
+    FaultFreq(file)= Prod_Faulty/N  + Test_Faulty/N
+    FaultExt(file) = Prod_FChurn/N  + Test_FChurn/N
+    """
+    N = total_commits if total_commits > 0 else 1
+    vectors: Dict[str, Dict[str, float]] = {}
+
+    for tf in test_files:
+        tm = file_metrics.get(tf, {})
+        if not tm:
+            for git_path, m in file_metrics.items():
+                if paths_match(tf, git_path):
+                    tm = m
+                    break
+
+        test_changes = tm.get('total_changes',  0)
+        test_churn   = tm.get('total_churn',    0)
+        test_faulty  = tm.get('faulty_changes', 0)
+        test_f_churn = tm.get('faulty_churn',   0)
+
+        prod_files = cochange_map.get(tf, set())
+        prod_changes = prod_churn = prod_faulty = prod_f_churn = 0
+
+        for pf in prod_files:
+            pm = file_metrics.get(pf, {})
+            if not pm:
+                for git_path, m in file_metrics.items():
+                    if paths_match(pf, git_path):
+                        pm = m
+                        break
+            prod_changes += pm.get('total_changes',  0)
+            prod_churn   += pm.get('total_churn',    0)
+            prod_faulty  += pm.get('faulty_changes', 0)
+            prod_f_churn += pm.get('faulty_churn',   0)
+
+        vectors[tf] = {
+            'chg_freq':   (prod_changes / N) + (test_changes / N),
+            'chg_ext':    (prod_churn   / N) + (test_churn   / N),
+            'fault_freq': (prod_faulty  / N) + (test_faulty  / N),
+            'fault_ext':  (prod_f_churn / N) + (test_f_churn / N),
+        }
+
+    return vectors
+
+
+# =====================================================
+# STEP 6 - SPEARMAN CORRELATION -> CP / FP / PS
+# =====================================================
+
+SMELL_ABBREVIATIONS = {
+    'Conditional Test Logic':          'CTL',
+    'Assertion Roulette':              'AR',
+    'Duplicate Assert':                'DA',
+    'Magic Number Test':               'MNT',
+    'Obscure In-Line Setup':           'OS',
+    'Redundant Assertion':             'RA',
+    'Exception Handling':              'EH',
+    'Constructor Initialization':      'CI',
+    'Suboptimal Assert':               'SA',
+    'Test Maverick':                   'TM',
+    'Redundant Print':                 'RP',
+    'General Fixture':                 'GF',
+    'Sleepy Test':                     'ST',
+    'Empty Test':                      'ET',
+    'Lack of Cohesion of Test Cases':  'LCTC',
+}
+
+
+def _spearman(x: List[float], y: List[float]) -> tuple:
+    """Compute Spearman rho. Returns (0.0, 1.0) if insufficient variance."""
+    arr_x = np.array(x, dtype=float)
+    arr_y = np.array(y, dtype=float)
+
+    if arr_x.std() == 0 or arr_y.std() == 0:
+        return 0.0, 1.0
+    if len(arr_x) < 3:
+        return 0.0, 1.0
+
+    rho, p = spearmanr(arr_x, arr_y)
+    return float(rho), float(p)
+
+
+def calculate_spearman_metrics(
+    smell_instances: List[Dict],
+    combined_vectors: Dict[str, Dict[str, float]],
+    all_test_files: List[str],
 ) -> Dict[str, Dict]:
     """
-    Calculate Spearman correlation between smell presence and metrics
-    
-    For each smell type, creates binary arrays and calculates correlation
+    Core calculation - implements paper equations (1)-(5):
+
+    CP(S) = rho(presence, chg_freq) + rho(presence, chg_ext)
+    FP(S) = rho(presence, fault_freq) + rho(presence, fault_ext)
+    PS(S) = (CP(S) + FP(S)) / 2
     """
-    smells_by_type = defaultdict(list)
-    for smell in smell_instances:
-        smells_by_type[smell['type']].append(smell)
-    
-    results = {}
-    
+    smells_by_type: Dict[str, List[Dict]] = defaultdict(list)
+    for inst in smell_instances:
+        smells_by_type[inst['type']].append(inst)
+
+    chg_freq_col   = [combined_vectors.get(tf, {}).get('chg_freq',   0.0) for tf in all_test_files]
+    chg_ext_col    = [combined_vectors.get(tf, {}).get('chg_ext',    0.0) for tf in all_test_files]
+    fault_freq_col = [combined_vectors.get(tf, {}).get('fault_freq', 0.0) for tf in all_test_files]
+    fault_ext_col  = [combined_vectors.get(tf, {}).get('fault_ext',  0.0) for tf in all_test_files]
+
+    results: Dict[str, Dict] = {}
+
     for smell_type, instances in smells_by_type.items():
-        smell_files = set(inst['file'] for inst in instances)
-        
-        # Create binary presence array
-        smell_presence = []
-        change_freq_values = []
-        change_extent_values = []
-        fault_freq_values = []
-        fault_extent_values = []
-        
-        for test_file in all_test_files:
-            # Smell presence (1 if file has this smell, 0 otherwise)
-            smell_presence.append(1 if test_file in smell_files else 0)
-            
-            # Get metrics for this file
-            if test_file in file_metrics:
-                metrics = file_metrics[test_file]
-                change_freq_values.append(metrics['total_changes'])
-                change_extent_values.append(metrics['total_churn'])
-                fault_freq_values.append(metrics['faulty_changes'])
-                fault_extent_values.append(metrics['faulty_churn'])
-            else:
-                change_freq_values.append(0)
-                change_extent_values.append(0)
-                fault_freq_values.append(0)
-                fault_extent_values.append(0)
-        
-        # Calculate Spearman correlations
-        try:
-            # Check if we have variance (not all zeros/ones)
-            if len(set(smell_presence)) > 1 and sum(change_freq_values) > 0:
-                rho_cf, p_cf = spearmanr(smell_presence, change_freq_values)
-                rho_ce, p_ce = spearmanr(smell_presence, change_extent_values)
-                rho_ff, p_ff = spearmanr(smell_presence, fault_freq_values)
-                rho_fe, p_fe = spearmanr(smell_presence, fault_extent_values)
-                
-                cp_score = rho_cf + rho_ce
-                fp_score = rho_ff + rho_fe
-                ps = (cp_score + fp_score) / 2
-                
-                results[smell_type] = {
-                    'change_frequency_rho': round(rho_cf, 4),
-                    'change_extent_rho': round(rho_ce, 4),
-                    'fault_frequency_rho': round(rho_ff, 4),
-                    'fault_extent_rho': round(rho_fe, 4),
-                    'cp_score': round(cp_score, 4),
-                    'fp_score': round(fp_score, 4),
-                    'prioritization_score': round(ps, 4),
-                    'p_values': {
-                        'cf': round(p_cf, 4),
-                        'ce': round(p_ce, 4),
-                        'ff': round(p_ff, 4),
-                        'fe': round(p_fe, 4)
-                    },
-                    'instance_count': len(instances)
-                }
-            else:
-                # Not enough variance for correlation
-                results[smell_type] = {
-                    'error': 'Insufficient variance for correlation',
-                    'instance_count': len(instances)
-                }
-        except Exception as e:
-            results[smell_type] = {
-                'error': str(e),
-                'instance_count': len(instances)
-            }
-    
+        abbr = SMELL_ABBREVIATIONS.get(smell_type, smell_type[:4].upper())
+        smell_files: Set[str] = set(inst['file'] for inst in instances)
+
+        presence: List[float] = [
+            1.0 if any(paths_match(tf, sf) for sf in smell_files) else 0.0
+            for tf in all_test_files
+        ]
+
+        rho_cf, p_cf = _spearman(presence, chg_freq_col)
+        rho_ce, p_ce = _spearman(presence, chg_ext_col)
+        rho_ff, p_ff = _spearman(presence, fault_freq_col)
+        rho_fe, p_fe = _spearman(presence, fault_ext_col)
+
+        cp_score = rho_cf + rho_ce
+        fp_score = rho_ff + rho_fe
+        ps_score = (cp_score + fp_score) / 2
+
+        results[smell_type] = {
+            'smell_type':   smell_type,
+            'abbreviation': abbr,
+            'change_frequency_rho':  round(rho_cf, 4),
+            'change_extent_rho':     round(rho_ce, 4),
+            'fault_frequency_rho':   round(rho_ff, 4),
+            'fault_extent_rho':      round(rho_fe, 4),
+            'p_values': {
+                'cf': round(p_cf, 4),
+                'ce': round(p_ce, 4),
+                'ff': round(p_ff, 4),
+                'fe': round(p_fe, 4),
+            },
+            'significant': {
+                'cf': p_cf < 0.05,
+                'ce': p_ce < 0.05,
+                'ff': p_ff < 0.05,
+                'fe': p_fe < 0.05,
+            },
+            'cp_score':             round(cp_score, 4),
+            'fp_score':             round(fp_score, 4),
+            'prioritization_score': round(ps_score, 4),
+            'instance_count':       len(instances),
+            'affected_test_files':  len(smell_files),
+            'files_with_smell':     list(smell_files),
+        }
+
+        print(
+            f"  [{abbr:4}] CF={rho_cf:+.4f} CE={rho_ce:+.4f} | "
+            f"FF={rho_ff:+.4f} FE={rho_fe:+.4f} | "
+            f"CP={cp_score:+.4f} FP={fp_score:+.4f} | "
+            f"PS={ps_score:+.4f}  ({len(instances)} instances)"
+        )
+
     return results
 
 
 # =====================================================
-# MAIN ANALYSIS FUNCTION
+# STEP 7 - RANKING (paper Section III-D)
 # =====================================================
+
+def rank_smells(metrics: Dict[str, Dict]) -> List[Dict]:
+    """Sort smells by Prioritization Score descending."""
+    ranked = sorted(
+        metrics.values(),
+        key=lambda x: x.get('prioritization_score', 0.0),
+        reverse=True,
+    )
+    for i, entry in enumerate(ranked, start=1):
+        entry['data_rank'] = i
+    return ranked
+
+
+# =====================================================
+# MAIN ENTRY POINT
+# =====================================================
+
 def analyze_project_with_git(
     project_path: Path,
-    smell_instances: List[Dict]
+    smell_instances: List[Dict],
 ) -> Dict:
     """
-    Main function to analyze a project and calculate CP/FP metrics
-    
-    Args:
-        project_path: Path to the git repository
-        smell_instances: List of detected smell instances
-    
+    Full pipeline - call this from the service/API layer.
+
     Returns:
-        Dict with metrics for each smell type
+        {
+            'ranked_smells': [...sorted by PS desc...],
+            'metrics':       { smell_type: {...} },
+            'statistics':    { total_commits, faulty_commits, ... },
+        }
     """
-    print(f"\n🔍 Analyzing Git history for: {project_path}")
-    
-    # Extract git history
+    print(f"\n{'='*60}")
+    print(f"  Analyzing: {project_path.name}")
+    print(f"{'='*60}")
+
     commits = extract_git_history(project_path)
-    
     if not commits:
-        return {
-            'error': 'No git history found or not a git repository',
-            'metrics': {}
-        }
-    
-    print(f"📊 Analyzing {len(commits)} commits...")
-    
-    # Calculate simple metrics
-    metrics = calculate_smell_metrics(smell_instances, commits)
-    
-    # Calculate statistics
+        return {'error': 'No git history found or not a git repository.', 'metrics': {}}
+
+    total_commits  = len(commits)
     faulty_commits = [c for c in commits if c['is_faulty']]
-    total_files = len(set(f for c in commits for f in c['files_changed'].keys()))
-    test_files_count = len([f for c in commits for f in c['files_changed'].keys() if is_test_file(f)])
-    
+
+    print(f"[GIT] Total commits : {total_commits}")
+    print(f"[GIT] Faulty commits: {len(faulty_commits)} "
+          f"({100*len(faulty_commits)/total_commits:.1f}%)")
+
+    file_metrics       = _build_file_metrics(commits)
+    all_git_test_files = sorted(f for f in file_metrics if is_test_file(f))
+    all_git_prod_files = sorted(f for f in file_metrics if is_production_file(f))
+
+    print(f"[GIT] Test files in history  : {len(all_git_test_files)}")
+    print(f"[GIT] Prod files in history  : {len(all_git_prod_files)}")
+
+    smell_test_files: Set[str] = set(inst['file'] for inst in smell_instances)
+    all_test_files: List[str]  = sorted(smell_test_files | set(all_git_test_files))
+
+    print(f"[SMELL] Test files with smells: {len(smell_test_files)}")
+    print(f"[TOTAL] Test file population  : {len(all_test_files)}")
+
+    if not all_test_files:
+        return {'error': 'No test files found in git history or smell instances.', 'metrics': {}}
+
+    print("\n[STEP 4] Building co-change map...")
+    cochange_map = _build_cochange_map(all_test_files, commits)
+    mapped = sum(1 for v in cochange_map.values() if v)
+    print(f"[COCHANGE] {mapped}/{len(all_test_files)} test files "
+          f"have co-changed production files")
+
+    print("\n[STEP 5] Computing combined metric vectors...")
+    combined_vectors = _build_combined_vectors(
+        all_test_files, file_metrics, cochange_map, total_commits
+    )
+
+    print("\n[STEP 6] Computing Spearman correlations (CP / FP / PS)...")
+    metrics = calculate_spearman_metrics(smell_instances, combined_vectors, all_test_files)
+
+    if not metrics:
+        return {'error': 'No metrics could be computed. Check smell instances.', 'metrics': {}}
+
+    print("\n[STEP 7] Ranking smells by Prioritization Score...")
+    ranked = rank_smells(metrics)
+
+    print("\n[RESULTS] Final Ranking:")
+    print(f"  {'Rank':<5} {'Abbr':<6} {'PS':>7}  {'CP':>7}  {'FP':>7}  Smell")
+    print(f"  {'-'*60}")
+    for entry in ranked:
+        print(
+            f"  {entry['data_rank']:<5} "
+            f"{entry['abbreviation']:<6} "
+            f"{entry['prioritization_score']:>+7.4f}  "
+            f"{entry['cp_score']:>+7.4f}  "
+            f"{entry['fp_score']:>+7.4f}  "
+            f"{entry['smell_type']}"
+        )
+
+    statistics = {
+        'total_commits':         total_commits,
+        'faulty_commits':        len(faulty_commits),
+        'fault_commit_pct':      round(100 * len(faulty_commits) / total_commits, 2),
+        'total_test_files':      len(all_test_files),
+        'total_prod_files':      len(all_git_prod_files),
+        'smell_types_analyzed':  len(metrics),
+        'total_smell_instances': len(smell_instances),
+    }
+
     return {
-        'metrics': metrics,
-        'statistics': {
-            'total_commits': len(commits),
-            'faulty_commits': len(faulty_commits),
-            'fault_percentage': round(len(faulty_commits) / len(commits) * 100, 2) if commits else 0,
-            'total_files': total_files,
-            'test_files': test_files_count
-        }
+        'ranked_smells': ranked,
+        'metrics':       metrics,
+        'statistics':    statistics,
     }
