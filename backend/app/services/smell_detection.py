@@ -6,7 +6,6 @@ from pathlib import Path
 from collections import defaultdict
 from .git_metrics import analyze_project_with_git
 
-
 # =====================================================
 # MAIN ENTRY POINT
 # =====================================================

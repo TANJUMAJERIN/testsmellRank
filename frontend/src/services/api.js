@@ -76,4 +76,50 @@ export const detectTestSmells = async (projectPath) => {
   return response.data;
 };
 
+// ── Projects API ────────────────────────────────────────────────────
+export const projectsAPI = {
+  list: async () => {
+    const response = await api.get("/projects/");
+    return response.data;
+  },
+
+  create: async (name, repoUrl) => {
+    const response = await api.post("/projects/", { name, repo_url: repoUrl });
+    return response.data;
+  },
+
+  delete: async (projectId) => {
+    const response = await api.delete(`/projects/${projectId}`);
+    return response.data;
+  },
+
+  // Runs
+  triggerRun: async (projectId) => {
+    const response = await api.post(`/projects/${projectId}/runs`);
+    return response.data;
+  },
+
+  listRuns: async (projectId) => {
+    const response = await api.get(`/projects/${projectId}/runs`);
+    return response.data;
+  },
+
+  getRun: async (projectId, runId) => {
+    const response = await api.get(`/projects/${projectId}/runs/${runId}`);
+    return response.data;
+  },
+
+  deleteRun: async (projectId, runId) => {
+    const response = await api.delete(`/projects/${projectId}/runs/${runId}`);
+    return response.data;
+  },
+
+  compare: async (projectId, run1Id, run2Id) => {
+    const response = await api.get(
+      `/projects/${projectId}/compare?run1=${run1Id}&run2=${run2Id}`
+    );
+    return response.data;
+  },
+};
+
 export default api;
