@@ -30,27 +30,27 @@ class TestWithAllSmells:
         self.data = [1, 2, 3, 4, 5]
         self.result = None
     
-    # Smell 1: Assertion Roulette (multiple assertions without messages)
-    def test_assertion_roulette(self):
-        """Multiple assertions without descriptive messages"""
-        x = 10
-        y = 20
-        z = x + y
-        assert z == 30  # No message
-        assert z > 20   # No message
-        assert z < 50   # No message
-        assert x < y    # No message
-        assert y > 5    # No message
+    # # Smell 1: Assertion Roulette (multiple assertions without messages)
+    # def test_assertion_roulette(self):
+    #     """Multiple assertions without descriptive messages"""
+    #     x = 10
+    #     y = 20
+    #     z = x + y
+    #     assert z == 30  # No message
+    #     assert z > 20   # No message
+    #     assert z < 50   # No message
+    #     assert x < y    # No message
+    #     assert y > 5    # No message
     
-    # Smell 2: Conditional Test Logic (if/else in test)
-    def test_conditional_logic(self):
-        """Test with conditional logic"""
-        value = 15
-        if value > 10:
-            result = "high"
-        else:
-            result = "low"
-        assert result == "high"
+    # # Smell 2: Conditional Test Logic (if/else in test)
+    # def test_conditional_logic(self):
+    #     """Test with conditional logic"""
+    #     value = 15
+    #     if value > 10:
+    #         result = "high"
+    #     else:
+    #         result = "low"
+    #     assert result == "high"
     
     # Smell 4: Duplicate Assert (same assertion repeated)
     def test_duplicate_assertions(self):
