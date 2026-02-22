@@ -192,9 +192,7 @@ const ProjectDetail = () => {
             </button>
             <button
               className="sidebar-item"
-              onClick={() =>
-                navigate("/dashboard", { state: { tab: "quick" } })
-              }
+              onClick={() => navigate("/quick-analysis")}
             >
               <span className="sidebar-icon">⚡</span>
               <span>Quick Analysis</span>

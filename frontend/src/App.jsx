@@ -10,6 +10,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import QuickAnalysis from "./pages/QuickAnalysis";
 import Results from "./pages/Results";
 import ProjectDetail from "./pages/ProjectDetail";
 import Compare from "./pages/Compare";
@@ -30,6 +31,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/quick-analysis"
+            element={
+              <ProtectedRoute>
+                <QuickAnalysis />
               </ProtectedRoute>
             }
           />

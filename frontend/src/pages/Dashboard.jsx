@@ -1,23 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate, useLocation } from "react-router-dom";
-import {
-  uploadZipFile,
-  uploadGithubRepo,
-  createProject,
-  listProjects,
-  deleteProject,
-} from "../services/api";
+import { useNavigate } from "react-router-dom";
+import { createProject, listProjects, deleteProject } from "../services/api";
 import "./Dashboard.css";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const [activeTab, setActiveTab] = useState(
-    location.state?.tab || "dashboard",
-  );
 
   // Project list state
   const [projects, setProjects] = useState([]);
@@ -29,20 +18,6 @@ const Dashboard = () => {
   const [newRepoUrl, setNewRepoUrl] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
-
-  // Quick Analysis mode
-  const [quickMode, setQuickMode] = useState("zip"); // "zip" | "github"
-
-  // ZIP one-off state
-  const [zipFile, setZipFile] = useState(null);
-  const [zipLoading, setZipLoading] = useState(false);
-  const [zipError, setZipError] = useState("");
-  const [zipSuccess, setZipSuccess] = useState("");
-
-  // GitHub quick-analysis state
-  const [quickGithubUrl, setQuickGithubUrl] = useState("");
-  const [quickGithubLoading, setQuickGithubLoading] = useState(false);
-  const [quickGithubError, setQuickGithubError] = useState("");
 
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -108,48 +83,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleZipSubmit = async (e) => {
-    e.preventDefault();
-    if (!zipFile) {
-      setZipError("Please select a ZIP file");
-      return;
-    }
-    setZipLoading(true);
-    setZipError("");
-    setZipSuccess("");
-    try {
-      const response = await uploadZipFile(zipFile);
-      setZipFile(null);
-      e.target.reset();
-      navigate("/results", { state: { projectData: response } });
-    } catch (err) {
-      setZipError(err.response?.data?.detail || "Failed to upload ZIP file");
-    } finally {
-      setZipLoading(false);
-    }
-  };
-
-  const handleQuickGithubSubmit = async (e) => {
-    e.preventDefault();
-    if (!quickGithubUrl.trim()) {
-      setQuickGithubError("Please enter a GitHub URL");
-      return;
-    }
-    setQuickGithubLoading(true);
-    setQuickGithubError("");
-    try {
-      const response = await uploadGithubRepo(quickGithubUrl.trim());
-      setQuickGithubUrl("");
-      navigate("/results", { state: { projectData: response } });
-    } catch (err) {
-      setQuickGithubError(
-        err.response?.data?.detail || "Failed to analyse repository",
-      );
-    } finally {
-      setQuickGithubLoading(false);
-    }
-  };
-
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
     return new Date(dateStr).toLocaleDateString(undefined, {
@@ -179,15 +112,15 @@ const Dashboard = () => {
         <aside className="sidebar">
           <nav className="sidebar-nav">
             <button
-              className={`sidebar-item ${activeTab === "dashboard" ? "active" : ""}`}
-              onClick={() => setActiveTab("dashboard")}
+              className="sidebar-item active"
+              onClick={() => navigate("/dashboard")}
             >
               <span className="sidebar-icon">🏠</span>
               <span>Dashboard</span>
             </button>
             <button
-              className={`sidebar-item ${activeTab === "quick" ? "active" : ""}`}
-              onClick={() => setActiveTab("quick")}
+              className="sidebar-item"
+              onClick={() => navigate("/quick-analysis")}
             >
               <span className="sidebar-icon">⚡</span>
               <span>Quick Analysis</span>
@@ -197,257 +130,114 @@ const Dashboard = () => {
 
         {/* ── Main content ─────────────────────────────────────── */}
         <main className="main-content">
-          {/* ════ DASHBOARD TAB ════ */}
-          {activeTab === "dashboard" && (
+          <div className="content-header">
             <div>
-              <div className="content-header">
-                <div>
-                  <h2 className="content-title">My Projects</h2>
-                  <p className="content-subtitle">
-                    Track GitHub repositories across multiple analysis runs
-                  </p>
-                </div>
-                <button
-                  className="new-project-btn"
-                  onClick={() => {
-                    setShowModal(true);
-                    setModalError("");
-                  }}
-                >
-                  + New Project
-                </button>
-              </div>
-
-              {projectsLoading ? (
-                <div className="loading-container">
-                  <div className="spinner"></div>
-                  <p>Loading projects…</p>
-                </div>
-              ) : projects.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">🧪</div>
-                  <h3>No projects yet</h3>
-                  <p>
-                    Create your first project to start tracking test smell
-                    rankings over time.
-                  </p>
-                  <button
-                    className="new-project-btn"
-                    style={{ marginTop: 16 }}
-                    onClick={() => setShowModal(true)}
-                  >
-                    + Create First Project
-                  </button>
-                </div>
-              ) : (
-                <div className="table-card">
-                  <table className="projects-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Project Name</th>
-                        <th>Repository</th>
-                        <th>Runs</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {projects.map((project, idx) => (
-                        <tr key={project.id}>
-                          <td className="col-index">{idx + 1}</td>
-                          <td className="col-name">
-                            <span className="project-name-cell">
-                              {project.name}
-                            </span>
-                          </td>
-                          <td className="col-repo">
-                            <a
-                              href={project.repo_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="repo-link"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {project.repo_url.replace(
-                                "https://github.com/",
-                                "",
-                              )}
-                            </a>
-                          </td>
-                          <td className="col-runs">
-                            <span className="run-count-badge">
-                              {project.run_count} run
-                              {project.run_count !== 1 ? "s" : ""}
-                            </span>
-                          </td>
-                          <td className="col-date">
-                            {formatDate(project.created_at)}
-                          </td>
-                          <td className="col-actions">
-                            <button
-                              className="action-btn view-btn"
-                              title="View project"
-                              onClick={() =>
-                                navigate(`/project/${project.id}`, {
-                                  state: {
-                                    projectName: project.name,
-                                    repoUrl: project.repo_url,
-                                  },
-                                })
-                              }
-                            >
-                              👁
-                            </button>
-                            <button
-                              className="action-btn del-btn"
-                              title="Delete project"
-                              onClick={() => setDeleteConfirm(project.id)}
-                            >
-                              🗑
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <h2 className="content-title">My Projects</h2>
+              <p className="content-subtitle">
+                Track GitHub repositories across multiple analysis runs
+              </p>
             </div>
-          )}
+            <button
+              className="new-project-btn"
+              onClick={() => {
+                setShowModal(true);
+                setModalError("");
+              }}
+            >
+              + New Project
+            </button>
+          </div>
 
-          {/* ════ QUICK ANALYSIS TAB ════ */}
-          {activeTab === "quick" && (
-            <div>
-              <div className="content-header">
-                <div>
-                  <h2 className="content-title">Quick Analysis</h2>
-                  <p className="content-subtitle">
-                    One-off analysis — results are not saved to history
-                  </p>
-                </div>
-              </div>
-
-              {/* Mode toggle */}
-              <div className="quick-mode-toggle">
-                <button
-                  className={`quick-mode-btn ${quickMode === "zip" ? "active" : ""}`}
-                  onClick={() => {
-                    setQuickMode("zip");
-                    setZipError("");
-                    setQuickGithubError("");
-                  }}
-                >
-                  📦 ZIP File
-                </button>
-                <button
-                  className={`quick-mode-btn ${quickMode === "github" ? "active" : ""}`}
-                  onClick={() => {
-                    setQuickMode("github");
-                    setZipError("");
-                    setQuickGithubError("");
-                  }}
-                >
-                  🔗 GitHub URL
-                </button>
-              </div>
-
-              {quickMode === "zip" && (
-                <div className="quick-card">
-                  <div className="quick-card-icon">📦</div>
-                  <h3>Upload a ZIP File</h3>
-                  <p className="quick-card-desc">
-                    Upload a ZIP containing your Python project. Test smells
-                    will be detected and ranked immediately. Results won't be
-                    stored — use <strong>Projects</strong> for tracked history.
-                  </p>
-
-                  {zipError && <div className="error-message">{zipError}</div>}
-
-                  <form onSubmit={handleZipSubmit} className="quick-form">
-                    <div className="file-drop-area">
-                      <input
-                        type="file"
-                        id="zip-input"
-                        className="file-input-hidden"
-                        accept=".zip"
-                        onChange={(e) => setZipFile(e.target.files[0])}
-                        disabled={zipLoading}
-                      />
-                      <label htmlFor="zip-input" className="file-label">
-                        {zipFile ? (
-                          <>
-                            <span className="file-chosen-icon">✅</span>{" "}
-                            {zipFile.name}
-                          </>
-                        ) : (
-                          <>
-                            <span className="file-chosen-icon">📁</span> Click
-                            to choose a .zip file
-                          </>
-                        )}
-                      </label>
-                    </div>
-                    <button
-                      type="submit"
-                      className="upload-button"
-                      disabled={zipLoading || !zipFile}
-                    >
-                      {zipLoading ? (
-                        <>
-                          <span className="btn-spinner-white"></span> Analyzing…
-                        </>
-                      ) : (
-                        "⚡ Run Analysis"
-                      )}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {quickMode === "github" && (
-                <div className="quick-card">
-                  <div className="quick-card-icon">🔗</div>
-                  <h3>Analyse a GitHub Repository</h3>
-                  <p className="quick-card-desc">
-                    Enter a public GitHub repository URL. Test smells will be
-                    detected and ranked immediately. Results won't be stored —
-                    use <strong>Projects</strong> for tracked history.
-                  </p>
-
-                  {quickGithubError && (
-                    <div className="error-message">{quickGithubError}</div>
-                  )}
-
-                  <form
-                    onSubmit={handleQuickGithubSubmit}
-                    className="quick-form"
-                  >
-                    <input
-                      type="text"
-                      className="upload-input"
-                      placeholder="https://github.com/username/repository"
-                      value={quickGithubUrl}
-                      onChange={(e) => setQuickGithubUrl(e.target.value)}
-                      disabled={quickGithubLoading}
-                      style={{ width: "100%" }}
-                    />
-                    <button
-                      type="submit"
-                      className="upload-button"
-                      disabled={quickGithubLoading || !quickGithubUrl.trim()}
-                    >
-                      {quickGithubLoading ? (
-                        <>
-                          <span className="btn-spinner-white"></span> Analyzing…
-                        </>
-                      ) : (
-                        "⚡ Run Analysis"
-                      )}
-                    </button>
-                  </form>
-                </div>
-              )}
+          {projectsLoading ? (
+            <div className="loading-container">
+              <div className="spinner"></div>
+              <p>Loading projects…</p>
+            </div>
+          ) : projects.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">🧪</div>
+              <h3>No projects yet</h3>
+              <p>
+                Create your first project to start tracking test smell rankings
+                over time.
+              </p>
+              <button
+                className="new-project-btn"
+                style={{ marginTop: 16 }}
+                onClick={() => setShowModal(true)}
+              >
+                + Create First Project
+              </button>
+            </div>
+          ) : (
+            <div className="table-card">
+              <table className="projects-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Project Name</th>
+                    <th>Repository</th>
+                    <th>Runs</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projects.map((project, idx) => (
+                    <tr key={project.id}>
+                      <td className="col-index">{idx + 1}</td>
+                      <td className="col-name">
+                        <span className="project-name-cell">
+                          {project.name}
+                        </span>
+                      </td>
+                      <td className="col-repo">
+                        <a
+                          href={project.repo_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="repo-link"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {project.repo_url.replace("https://github.com/", "")}
+                        </a>
+                      </td>
+                      <td className="col-runs">
+                        <span className="run-count-badge">
+                          {project.run_count} run
+                          {project.run_count !== 1 ? "s" : ""}
+                        </span>
+                      </td>
+                      <td className="col-date">
+                        {formatDate(project.created_at)}
+                      </td>
+                      <td className="col-actions">
+                        <button
+                          className="action-btn view-btn"
+                          title="View project"
+                          onClick={() =>
+                            navigate(`/project/${project.id}`, {
+                              state: {
+                                projectName: project.name,
+                                repoUrl: project.repo_url,
+                              },
+                            })
+                          }
+                        >
+                          👁
+                        </button>
+                        <button
+                          className="action-btn del-btn"
+                          title="Delete project"
+                          onClick={() => setDeleteConfirm(project.id)}
+                        >
+                          🗑
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </main>
