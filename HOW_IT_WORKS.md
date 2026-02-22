@@ -4,7 +4,7 @@
 
 ## Two Ways to Submit a Project
 
-### Option A — GitHub URL
+### Option A — GitHub URL okay then
 
 You paste a GitHub repository URL (e.g. `https://github.com/user/myproject`).
 
