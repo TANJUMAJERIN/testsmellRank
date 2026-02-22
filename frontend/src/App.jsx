@@ -13,6 +13,8 @@ import Dashboard from "./pages/Dashboard";
 import Results from "./pages/Results";
 import ProjectDetail from "./pages/ProjectDetail";
 import Compare from "./pages/Compare";
+import Survey from "./pages/Survey";
+import QuadrantResults from "./pages/QuadrantResults";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -63,6 +65,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/project/:projectId/runs/:runId/quadrant"
+            element={
+              <ProtectedRoute>
+                <QuadrantResults />
+              </ProtectedRoute>
+            }
+          />
+          {/* Public survey page — no auth */}
+          <Route path="/survey/:token" element={<Survey />} />
         </Routes>
       </Router>
     </AuthProvider>

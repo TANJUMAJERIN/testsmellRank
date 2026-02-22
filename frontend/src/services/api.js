@@ -148,7 +148,22 @@ export const projectsAPI = {
 
   compare: async (projectId, run1Id, run2Id) => {
     const response = await api.get(
-      `/projects/${projectId}/compare?run1=${run1Id}&run2=${run2Id}`
+      `/projects/${projectId}/compare?run1=${run1Id}&run2=${run2Id}`,
+    );
+    return response.data;
+  },
+
+  // Survey
+  startSurvey: async (projectId, runId) => {
+    const response = await api.post(
+      `/projects/${projectId}/runs/${runId}/survey/start`,
+    );
+    return response.data;
+  },
+
+  getSurveyStatus: async (projectId, runId) => {
+    const response = await api.get(
+      `/projects/${projectId}/runs/${runId}/survey`,
     );
     return response.data;
   },
