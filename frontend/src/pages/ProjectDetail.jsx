@@ -179,189 +179,218 @@ const ProjectDetail = () => {
         </div>
       </nav>
 
-      <div className="pd-content">
-        <div className="pd-header">
-          <button
-            className="back-button"
-            onClick={() => navigate("/dashboard")}
-          >
-            Back to Dashboard
-          </button>
-          <div className="pd-title-row">
-            <div>
-              <h2 className="pd-title">{projectName}</h2>
-              {repoUrl && <p className="project-card-url">{repoUrl}</p>}
-              <p className="pd-subtitle">
-                Re-run the analysis to track how smell rankings change over time
-              </p>
-            </div>
+      <div className="pd-layout">
+        {/* ── Sidebar ── */}
+        <aside className="sidebar">
+          <nav className="sidebar-nav">
             <button
-              className="run-btn"
-              onClick={handleTriggerRun}
-              disabled={runLoading}
+              className="sidebar-item"
+              onClick={() => navigate("/dashboard")}
             >
-              {runLoading ? (
-                <>
-                  <span className="btn-spinner"></span> Analyzing
-                </>
-              ) : (
-                "Run Analysis"
-              )}
+              <span className="sidebar-icon">🏠</span>
+              <span>Dashboard</span>
             </button>
-          </div>
-          {runLoading && (
-            <div className="run-progress">
-              <div className="spinner"></div>
-              <p>
-                Cloning repository and analyzing test smells this may take a
-                minute.
-              </p>
-            </div>
-          )}
-          {error && <div className="error-message">{error}</div>}
-        </div>
+            <button
+              className="sidebar-item"
+              onClick={() =>
+                navigate("/dashboard", { state: { tab: "quick" } })
+              }
+            >
+              <span className="sidebar-icon">⚡</span>
+              <span>Quick Analysis</span>
+            </button>
+          </nav>
+        </aside>
 
-        {selectedRuns.length > 0 && (
-          <div className="compare-bar">
-            <span>
-              {selectedRuns.length === 1
-                ? "Select one more run to compare"
-                : `Comparing Run #${runs.find((r) => r.id === selectedRuns[0])?.run_number} vs Run #${runs.find((r) => r.id === selectedRuns[1])?.run_number}`}
-            </span>
-            <div className="compare-bar-actions">
-              {selectedRuns.length === 2 && (
-                <button className="compare-btn" onClick={handleCompare}>
-                  Compare
-                </button>
-              )}
-              <button className="clear-btn" onClick={() => setSelectedRuns([])}>
-                Clear
+        <div className="pd-content">
+          <div className="pd-header">
+            <button
+              className="back-button"
+              onClick={() => navigate("/dashboard")}
+            >
+              Back to Dashboard
+            </button>
+            <div className="pd-title-row">
+              <div>
+                <h2 className="pd-title">{projectName}</h2>
+                {repoUrl && <p className="project-card-url">{repoUrl}</p>}
+                <p className="pd-subtitle">
+                  Re-run the analysis to track how smell rankings change over
+                  time
+                </p>
+              </div>
+              <button
+                className="run-btn"
+                onClick={handleTriggerRun}
+                disabled={runLoading}
+              >
+                {runLoading ? (
+                  <>
+                    <span className="btn-spinner"></span> Analyzing
+                  </>
+                ) : (
+                  "Run Analysis"
+                )}
               </button>
             </div>
+            {runLoading && (
+              <div className="run-progress">
+                <div className="spinner"></div>
+                <p>
+                  Cloning repository and analyzing test smells this may take a
+                  minute.
+                </p>
+              </div>
+            )}
+            {error && <div className="error-message">{error}</div>}
           </div>
-        )}
 
-        {loading ? (
-          <div className="loading-container">
-            <div className="spinner"></div>
-            <p>Loading runs</p>
-          </div>
-        ) : runs.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon"></div>
-            <h3>No runs yet</h3>
-            <p>
-              Click "Run Analysis" to perform the first analysis of this
-              repository.
-            </p>
-          </div>
-        ) : (
-          <div className="runs-table-wrapper">
-            <p className="compare-hint">
-              Tick two checkboxes to compare runs side by side.
-            </p>
-            <table className="runs-table">
-              <thead>
-                <tr>
-                  <th>Compare</th>
-                  <th>Run</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Files</th>
-                  <th>Smells</th>
-                  <th>Action</th>
-                  <th>Survey</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((run) => (
-                  <tr
-                    key={run.id}
-                    className={
-                      selectedRuns.includes(run.id) ? "row-selected" : ""
-                    }
-                  >
-                    <td>
-                      {run.status === "completed" && (
-                        <input
-                          type="checkbox"
-                          className="run-checkbox"
-                          checked={selectedRuns.includes(run.id)}
-                          onChange={() => toggleSelectRun(run.id)}
-                        />
-                      )}
-                    </td>
-                    <td>
-                      <span className="run-number">#{run.run_number}</span>
-                    </td>
-                    <td className="run-date">{formatDate(run.created_at)}</td>
-                    <td>{statusChip(run.status)}</td>
-                    <td>{run.summary?.total_files ?? ""}</td>
-                    <td>{run.summary?.total_smells ?? ""}</td>
-                    <td className="action-cell">
-                      {run.status === "completed" && (
-                        <button
-                          className="view-btn"
-                          onClick={() => handleViewRun(run.id)}
-                        >
-                          View Results
-                        </button>
-                      )}
-                      {run.status === "failed" && (
-                        <span className="error-hint" title={run.error}>
-                          Failed
-                        </span>
-                      )}
-                      <button
-                        className="del-run-btn"
-                        title="Delete run"
-                        onClick={() => setDeleteRunConfirm(run.id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                    <td>
-                      {run.status === "completed" && (
-                        <button
-                          className="view-btn"
-                          style={{
-                            background:
-                              surveyPanelRunId === run.id
-                                ? "#764ba2"
-                                : undefined,
-                          }}
-                          onClick={() => handleToggleSurveyPanel(run.id)}
-                        >
-                          {surveyPanelRunId === run.id
-                            ? "Hide Survey"
-                            : "Survey"}
-                        </button>
-                      )}
-                    </td>
+          {selectedRuns.length > 0 && (
+            <div className="compare-bar">
+              <span>
+                {selectedRuns.length === 1
+                  ? "Select one more run to compare"
+                  : `Comparing Run #${runs.find((r) => r.id === selectedRuns[0])?.run_number} vs Run #${runs.find((r) => r.id === selectedRuns[1])?.run_number}`}
+              </span>
+              <div className="compare-bar-actions">
+                {selectedRuns.length === 2 && (
+                  <button className="compare-btn" onClick={handleCompare}>
+                    Compare
+                  </button>
+                )}
+                <button
+                  className="clear-btn"
+                  onClick={() => setSelectedRuns([])}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="loading-container">
+              <div className="spinner"></div>
+              <p>Loading runs</p>
+            </div>
+          ) : runs.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon"></div>
+              <h3>No runs yet</h3>
+              <p>
+                Click "Run Analysis" to perform the first analysis of this
+                repository.
+              </p>
+            </div>
+          ) : (
+            <div className="runs-table-wrapper">
+              <p className="compare-hint">
+                Tick two checkboxes to compare runs side by side.
+              </p>
+              <table className="runs-table">
+                <thead>
+                  <tr>
+                    <th>Compare</th>
+                    <th>Run</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Files</th>
+                    <th>Smells</th>
+                    <th>Action</th>
+                    <th>Survey</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {runs.map((run) => (
+                    <tr
+                      key={run.id}
+                      className={
+                        selectedRuns.includes(run.id) ? "row-selected" : ""
+                      }
+                    >
+                      <td>
+                        {run.status === "completed" && (
+                          <input
+                            type="checkbox"
+                            className="run-checkbox"
+                            checked={selectedRuns.includes(run.id)}
+                            onChange={() => toggleSelectRun(run.id)}
+                          />
+                        )}
+                      </td>
+                      <td>
+                        <span className="run-number">#{run.run_number}</span>
+                      </td>
+                      <td className="run-date">{formatDate(run.created_at)}</td>
+                      <td>{statusChip(run.status)}</td>
+                      <td>{run.summary?.total_files ?? ""}</td>
+                      <td>{run.summary?.total_smells ?? ""}</td>
+                      <td className="action-cell">
+                        {run.status === "completed" && (
+                          <button
+                            className="view-btn"
+                            onClick={() => handleViewRun(run.id)}
+                          >
+                            View Results
+                          </button>
+                        )}
+                        {run.status === "failed" && (
+                          <span className="error-hint" title={run.error}>
+                            Failed
+                          </span>
+                        )}
+                        <button
+                          className="del-run-btn"
+                          title="Delete run"
+                          onClick={() => setDeleteRunConfirm(run.id)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                      <td>
+                        {run.status === "completed" && (
+                          <button
+                            className="view-btn"
+                            style={{
+                              background:
+                                surveyPanelRunId === run.id
+                                  ? "#764ba2"
+                                  : undefined,
+                            }}
+                            onClick={() => handleToggleSurveyPanel(run.id)}
+                          >
+                            {surveyPanelRunId === run.id
+                              ? "Hide Survey"
+                              : "Survey"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        {/* ── Survey Panel — shown when a run's Survey button is clicked ── */}
-        {surveyPanelRunId && (
-          <SurveyPanel
-            projectId={projectId}
-            runId={surveyPanelRunId}
-            survey={surveyData[surveyPanelRunId] || null}
-            loading={surveyLoading[surveyPanelRunId] || false}
-            onStart={() => handleStartSurvey(surveyPanelRunId)}
-            onViewQuadrant={() =>
-              navigate(
-                `/project/${projectId}/runs/${surveyPanelRunId}/quadrant`,
-              )
-            }
-          />
-        )}
+          {/* ── Survey Panel — shown when a run's Survey button is clicked ── */}
+          {surveyPanelRunId && (
+            <SurveyPanel
+              projectId={projectId}
+              runId={surveyPanelRunId}
+              survey={surveyData[surveyPanelRunId] || null}
+              loading={surveyLoading[surveyPanelRunId] || false}
+              onStart={() => handleStartSurvey(surveyPanelRunId)}
+              onViewQuadrant={() =>
+                navigate(
+                  `/project/${projectId}/runs/${surveyPanelRunId}/quadrant`,
+                )
+              }
+            />
+          )}
+        </div>
+        {/* end pd-content */}
       </div>
-      {/* end pd-content */}
+      {/* end pd-layout */}
 
       {deleteRunConfirm && (
         <div

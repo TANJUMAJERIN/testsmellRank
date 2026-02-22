@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   uploadZipFile,
   uploadGithubRepo,
@@ -13,8 +13,11 @@ import "./Dashboard.css";
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState(
+    location.state?.tab || "dashboard",
+  );
 
   // Project list state
   const [projects, setProjects] = useState([]);
