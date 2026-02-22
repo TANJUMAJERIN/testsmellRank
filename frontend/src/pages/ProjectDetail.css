@@ -6,11 +6,15 @@
 
 /*  Navbar  */
 .navbar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   padding: 0 2rem;
   height: 64px;
   display: flex;
   align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 .navbar-content {
   width: 100%;
@@ -19,10 +23,11 @@
   align-items: center;
 }
 .navbar-title {
-  color: white;
+  color: #667eea;
   font-size: 1.4rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
+  letter-spacing: -0.5px;
 }
 .navbar-right {
   display: flex;
@@ -30,20 +35,22 @@
   gap: 1rem;
 }
 .user-name {
-  color: rgba(255,255,255,.9);
-  font-size: 0.9rem;
+  color: #555;
+  font-weight: 600;
+  font-size: 15px;
 }
 .logout-button {
-  background: rgba(255,255,255,.2);
-  border: 1px solid rgba(255,255,255,.4);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
   color: white;
-  padding: 0.4rem 1rem;
-  border-radius: 6px;
+  padding: 9px 22px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background .2s;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity .2s;
 }
-.logout-button:hover { background: rgba(255,255,255,.3); }
+.logout-button:hover { opacity: 0.88; }
 
 /*  Content  */
 .pd-content {

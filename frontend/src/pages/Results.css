@@ -1,7 +1,53 @@
 .results-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f0f2f7;
 }
+
+/* ── Navbar ─────────────────────────────────────────────────────── */
+.navbar {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  z-index: 100;
+  position: sticky;
+  top: 0;
+}
+.navbar-content {
+  max-width: 100%;
+  padding: 16px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.navbar-title {
+  color: #667eea;
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.user-name {
+  color: #555;
+  font-weight: 600;
+  font-size: 15px;
+}
+.logout-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 9px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.logout-button:hover { opacity: 0.88; }
 
 .results-content {
   max-width: 1200px;
@@ -11,7 +57,7 @@
 
 .results-header {
   text-align: center;
-  color: white;
+  color: #1a1a2e;
   margin-bottom: 2rem;
   position: relative;
 }
@@ -20,31 +66,32 @@
   position: absolute;
   left: 0;
   top: 0;
-  padding: 0.75rem 1.5rem;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  color: white;
-  font-size: 1rem;
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: color 0.2s;
 }
 
 .back-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateX(-5px);
+  color: #764ba2;
 }
 
 .results-header h2 {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  color: #1a1a2e;
 }
 
 .project-name {
   font-size: 1.2rem;
-  opacity: 0.9;
+  color: #6b7280;
 }
 
 .loading-container {
@@ -52,7 +99,7 @@
   padding: 4rem 2rem;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .spinner {
@@ -114,7 +161,7 @@
   background: white;
   border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .summary-cards {
@@ -675,7 +722,6 @@
   .back-button {
     position: static;
     margin-bottom: 1rem;
-    width: 100%;
   }
 
   .summary-cards {

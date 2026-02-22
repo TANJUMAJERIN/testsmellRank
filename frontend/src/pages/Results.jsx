@@ -105,7 +105,9 @@ const Results = () => {
 
       <div className="results-content">
         <div className="results-header">
-          
+          <button className="back-button" onClick={handleBack}>
+            ← Back
+          </button>
           <h2>Test Smell Detection Results</h2>
 
           {displayName && (
