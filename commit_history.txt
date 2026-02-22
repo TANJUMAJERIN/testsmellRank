@@ -1,0 +1,310 @@
+3872ac0a033fa22d605b4e8fb6e92ae5141f6cfc|get metrics changed|2026-02-20 23:56:53 +0600
+
+430	393	backend/app/services/git_metrics.py
+0	1	backend/app/services/smell_detection.py
+18	0	frontend/src/App.jsx
+290	0	frontend/src/pages/Compare.css
+193	0	frontend/src/pages/Compare.jsx
+299	0	frontend/src/pages/ProjectDetail.css
+244	0	frontend/src/pages/ProjectDetail.jsx
+1	1	frontend/src/pages/Results.jsx
+46	0	frontend/src/services/api.js
+b7714e2a2ecc916138d2a832325c349a8efceeec|test changed|2026-02-20 16:29:20 +0600
+
+20	20	tests/test_all_11_smells.py
+344b4cfeaaa33a3b6d1cbc582c104a0e6015d91b|feat: Implement run deletion functionality with confirmation modal|2026-02-20 01:06:07 +0600
+
+27	0	backend/app/routes/projects.py
+1	6	frontend/src/pages/Compare.jsx
+39	0	frontend/src/pages/ProjectDetail.css
+51	2	frontend/src/pages/ProjectDetail.jsx
+1	3	frontend/src/pages/Results.jsx
+5	0	frontend/src/services/api.js
+f12c9a8ca1c74b2d8c5426412c0744bc9c3ac6ed|feat: Add quick analysis mode with GitHub URL support and enhance ZIP file upload functionality|2026-02-20 00:57:31 +0600
+
+26	3	frontend/src/pages/Dashboard.css
+231	55	frontend/src/pages/Dashboard.jsx
+d826ca22857467f1801270ef6b6a5b3ad8b3c78c|feat: Enhance Dashboard layout and functionality with new sidebar and project management features|2026-02-20 00:47:49 +0600
+
+397	0	frontend/src/pages/Dashboard.css
+179	163	frontend/src/pages/Dashboard.jsx
+7e68097ac7a93ee60d3e7276beeacf66b4a336fe|feat: Implement project management and run comparison features|2026-02-20 00:35:46 +0600
+
+-	-	backend/app/core/__pycache__/database.cpython-312.pyc
+2	0	backend/app/core/database.py
+52	0	backend/app/models/project.py
+344	0	backend/app/routes/projects.py
+10	2	backend/app/routes/upload.py
+3	1	backend/main.py
+26	0	frontend/src/App.jsx
+183	0	frontend/src/pages/Compare.css
+228	0	frontend/src/pages/Compare.jsx
+103	0	frontend/src/pages/Dashboard.css
+253	89	frontend/src/pages/Dashboard.jsx
+209	0	frontend/src/pages/ProjectDetail.css
+260	0	frontend/src/pages/ProjectDetail.jsx
+61	27	frontend/src/pages/Results.jsx
+32	5	frontend/src/services/api.js
+a75a41b5f2f2846e77c6dd783c5e64d8cf6b05c5|changed|2026-02-19 23:44:09 +0600
+
+1	1	backend/main.py
+052435fe4639bc0785674508befeb815231635d0|chore: Remove example environment configuration file|2026-02-19 23:41:10 +0600
+
+0	5	backend/.env.example
+3595870299b20f172261a8fe15fe7987709d7bf4|feat: Add scripts to initialize git and create commit history for test files|2026-02-15 01:31:22 +0600
+
+140	0	add_commit_history.ps1
+141	0	setup_git_history.ps1
+85baa10592d8c1da656fb1bb2b2b54fa0b54ae18|feat: Add more verbose test cases|2026-02-15 00:42:15 +0600
+
+2	0	tests/test_verbose.py
+ca5b48124fde485f9819591923bb5a774c72e88a|chore: Update duplication tests|2026-02-15 00:42:15 +0600
+
+2	0	tests/test_duplication.py
+c46421e603efd0f9e4b64083546df9aff0fd862d|refactor: Improve arithmetic test structure|2026-02-15 00:42:15 +0600
+
+2	0	tests/test_arithmetic.py
+5aa4c0371e68d0b41b908189ac103c466596e59e|fault: Optimize slow test performance|2026-02-15 00:42:14 +0600
+
+2	0	tests/test_slow.py
+2047be36601527cd9ede382895580f617f118a7e|patch: Update comprehensive test logic|2026-02-15 00:42:14 +0600
+
+2	0	tests/test_all_21_smells.py
+e3166131d4ee3efcfc2db6091536d8fcb669c8ba|issue: Fix assertion messages (closes #42)|2026-02-15 00:42:14 +0600
+
+2	0	tests/test_all_11_smells.py
+2626c88582d0469688ef13aafa736f5692e1c123|defect: Fix lazy test evaluation|2026-02-15 00:42:13 +0600
+
+2	0	tests/test_lazy.py
+523fdb123e6cb0d5e6c4751deb5b0e7683ac1c29|error: Correct magic number usage|2026-02-15 00:42:13 +0600
+
+2	0	tests/test_magic.py
+3d3781bacf3b288e2b3e4d6a51cb9d406111f4a6|bug: Fix exception handling in tests|2026-02-15 00:42:13 +0600
+
+2	0	tests/test_exception.py
+2b237fd10252e75dc7cf978e7f89668fb45e0a06|fix: Improve conditional test logic|2026-02-15 00:42:12 +0600
+
+2	0	tests/test_conditional.py
+564707b93abaa18f59f590fd0d835b0bcb53485d|Remove outdated documentation and verification guide; optimize test smell detection and prioritization metrics|2026-02-15 00:24:42 +0600
+
+0	253	GITHUB_REPOSITORIES.md
+0	250	GIT_METRICS_DOCUMENTATION.md
+0	347	IMPLEMENTATION_SUMMARY.md
+0	25	OPTIMIZATION_APPLIED.md
+-	-	TestSmellPrioritization__ICSME'25 (1).pdf
+0	273	VERIFICATION_GUIDE.md
+5c9dd9b10164e895c3dbfc6da2b6b3ddbb6714b5|feat: Add diagnostic script and update repository preparation script for test smell analysis|2026-02-15 00:23:07 +0600
+
+253	0	GITHUB_REPOSITORIES.md
+273	0	VERIFICATION_GUIDE.md
+74	46	backend/app/services/git_metrics.py
+133	0	backend/diagnose_git_metrics.py
+1	1	backend/test_git_metrics.py
+133	0	prepare_repo.ps1
+782326520348dcb3a69f53c9f3145f1fa92de755|feat: Enhance documentation and UI for Git-based test smell prioritization metrics|2026-02-14 23:26:55 +0600
+
+32	2	GIT_METRICS_DOCUMENTATION.md
+41	9	IMPLEMENTATION_SUMMARY.md
+48	15	frontend/src/pages/Results.jsx
+5626906ec5c2b85020395adf87abfad02d4a6a9d|Add Git metrics analysis for test smell prioritization|2026-02-14 21:53:19 +0600
+
+220	0	GIT_METRICS_DOCUMENTATION.md
+315	0	IMPLEMENTATION_SUMMARY.md
+-	-	TestSmellPrioritization__ICSME'25 (1).pdf
+461	0	backend/app/services/git_metrics.py
+22	3	backend/app/services/smell_detection.py
+1	0	backend/requirements.txt
+132	0	backend/test_git_metrics.py
+264	0	frontend/src/pages/Results.css
+100	0	frontend/src/pages/Results.jsx
+78915490fc7d346578b9f75c3acd79b8b46a976b|feat: Refactor Results component to enhance unique smell type calculation and improve code readability|2026-02-14 20:50:08 +0600
+
+9	6	frontend/src/pages/Results.jsx
+ff53c066c8cb8ac6d08112b9fcb4cb65e3a802ea|feat: Enhance Results page with unique smell type analysis and improved styling|2026-02-14 20:49:47 +0600
+
+203	39	frontend/src/pages/Results.css
+57	4	frontend/src/pages/Results.jsx
+fd2882cff8278133b9f7bd69e7a418dd4cb9f0a9|feat: Implement comprehensive smell detection and add verification script|2026-02-14 20:28:15 +0600
+
+-	-	backend/app/__pycache__/__init__.cpython-312.pyc
+-	-	backend/app/core/__pycache__/__init__.cpython-312.pyc
+-	-	backend/app/core/__pycache__/config.cpython-312.pyc
+-	-	backend/app/core/__pycache__/database.cpython-312.pyc
+-	-	backend/app/core/__pycache__/security.cpython-312.pyc
+-	-	backend/app/models/__pycache__/__init__.cpython-312.pyc
+-	-	backend/app/models/__pycache__/user.cpython-312.pyc
+-	-	backend/app/routes/__pycache__/__init__.cpython-312.pyc
+-	-	backend/app/routes/__pycache__/auth.cpython-312.pyc
+350	106	backend/app/services/smell_detection.py
+25	0	backend/test_smell_verify.py
+5bd3bebaaaa3116aaf21997def8a299927a95370|style: Update .gitignore to include test-file, environment variables, and uploaded project files|2026-02-14 20:09:28 +0600
+
+7	0	.gitignore
+3d07a78bb2db4c105c7d0aea97ef4f1cb59bdba4|fix: Update subproject commit to indicate dirty state|2026-02-14 20:09:22 +0600
+
+0	5	backend/.env
+0	1	backend/uploaded_projects/user_6990806bb35c10803e964496/test file/test file
+fba7925aba9864b2c819861c9d07929ad70152f1|style: Update Results component and CSS for improved table layout and styling|2026-02-14 20:06:49 +0600
+
+1	0	backend/uploaded_projects/user_6990806bb35c10803e964496/test file/test file
+113	54	frontend/src/pages/Results.css
+90	244	frontend/src/pages/Results.jsx
+2	2	frontend/src/services/api.js
+3de8128743124450f2e1bfccab4c645dacbf426e|fix: Correct comment formatting in useEffect hook in Results component|2026-02-14 19:52:15 +0600
+
+1	1	frontend/src/pages/Results.jsx
+894ea6284bf67f8c08152cfed12b057f47365835|project upload done|2026-02-14 19:25:26 +0600
+
+0	1	backend/uploaded_projects/user_698ed13517d1c927afbbbcdb/PythonProjectTemplate
+0	1	backend/uploaded_projects/user_698ed13517d1c927afbbbcdb/minimal-pytest-project
+0	1	backend/uploaded_projects/user_698ed13517d1c927afbbbcdb/test file/test file
+cb777415b8a4038d5145a5ef0e3aa7019cc9efed|project upload completed|2026-02-14 19:20:58 +0600
+
+0	23	.flake8
+0	20	.jscpdrc
+25	0	OPTIMIZATION_APPLIED.md
+0	100	analyze_smells_by_file.py
+113	0	backend/app/routes/upload.py
+169	0	backend/app/services/smell_detection.py
+2	0	backend/main.py
+150	0	backend/tests/verification_smells.py
+1	0	backend/uploaded_projects/user_698ed13517d1c927afbbbcdb/PythonProjectTemplate
+1	0	backend/uploaded_projects/user_698ed13517d1c927afbbbcdb/minimal-pytest-project
+1	0	backend/uploaded_projects/user_698ed13517d1c927afbbbcdb/test file/test file
+0	102	check_pytest_smell_detection.py
+0	1	debug.log
+0	474	examples.py
+11	1	frontend/src/App.jsx
+139	0	frontend/src/pages/Dashboard.css
+129	62	frontend/src/pages/Dashboard.jsx
+211	0	frontend/src/pages/Landing.css
+72	0	frontend/src/pages/Landing.jsx
+280	0	frontend/src/pages/Results.css
+371	0	frontend/src/pages/Results.jsx
+29	0	frontend/src/services/api.js
+0	303	run_pytest_smell_library.py
+37	0	test_smell_detection.py
+0	629	unified_smell_detector.py
+a885dbe9d5aae4bf29f0cd07bc0e0563e03e9f77|Merge auth feature while keeping existing smell detection code|2025-12-21 21:28:33 +0600
+
+0	165	smell_report.json
+0	0	src/calculator.py
+0	1184	unified_smell_report.json
+63b145c1b371da1e418ebf8d45d6a2af0174b1e4|feat: Update .gitignore to include additional cache and build files|2025-12-21 01:02:18 +0600
+
+7	2	.gitignore
+3e17ddc24829378f305e7ef87d260c4b15538fbf|feat: Remove authentication and configuration files to streamline backend structure|2025-12-21 00:58:08 +0600
+
+0	48	backend/auth.py
+0	13	backend/config.py
+0	6	backend/database.py
+0	25	backend/models.py
+-	-	backend/routes/__pycache__/auth.cpython-312.pyc
+0	64	backend/routes/auth.py
+8e7290dca1dd4198923472cf621b9e2202e45b73|feat: Refactor backend structure and implement user authentication with FastAPI|2025-12-21 00:54:53 +0600
+
+0	0	backend/app/__init__.py
+-	-	backend/app/__pycache__/__init__.cpython-312.pyc
+0	0	backend/app/core/__init__.py
+-	-	backend/app/core/__pycache__/__init__.cpython-312.pyc
+-	-	backend/app/core/__pycache__/config.cpython-312.pyc
+-	-	backend/app/core/__pycache__/database.cpython-312.pyc
+-	-	backend/app/core/__pycache__/security.cpython-312.pyc
+13	0	backend/app/core/config.py
+6	0	backend/app/core/database.py
+48	0	backend/app/core/security.py
+0	0	backend/app/models/__init__.py
+-	-	backend/app/models/__pycache__/__init__.cpython-312.pyc
+-	-	backend/app/models/__pycache__/user.cpython-312.pyc
+25	0	backend/app/models/user.py
+0	0	backend/app/routes/__init__.py
+-	-	backend/app/routes/__pycache__/__init__.cpython-312.pyc
+-	-	backend/app/routes/__pycache__/auth.cpython-312.pyc
+64	0	backend/app/routes/auth.py
+0	0	backend/app/utils/__init__.py
+1	1	backend/main.py
+0c79e8ff2aaa193f4043bb546d0e2d4bf8b4b92a|feat: Update .gitignore to include .vite directory|2025-12-21 00:49:48 +0600
+
+2	1	.gitignore
+d13e4d80f91ca3d5f14fffa773df2df9b981c7ff|feat: Update README to reflect MongoDB Atlas setup and configuration|2025-12-21 00:45:48 +0600
+
+12	2	backend/README.md
+a0bf185c7e68c52fa11410d97151d8e881a1f75f|feat: Update .gitignore to include _pycache_ directory|2025-12-21 00:43:36 +0600
+
+2	1	.gitignore
+8a5430bad7df6a97ac120fa3391eca2c63805523|feat: Update MongoDB connection string and secret key in .env.example; add email-validator dependency|2025-12-21 00:42:54 +0600
+
+2	2	backend/.env.example
+-	-	backend/__pycache__/auth.cpython-312.pyc
+-	-	backend/__pycache__/config.cpython-312.pyc
+-	-	backend/__pycache__/database.cpython-312.pyc
+-	-	backend/__pycache__/models.cpython-312.pyc
+1	0	backend/requirements.txt
+-	-	backend/routes/__pycache__/auth.cpython-312.pyc
+bd3b7af38827247e58703c44ab3b873bbf90cc60|feat: Update MongoDB connection string to use Atlas|2025-12-21 00:35:30 +0600
+
+1	1	backend/.env
+5289639c5aa6afd1fdaa7e8f50ad1508221da169|Refactor code structure for improved readability and maintainability|2025-12-21 00:27:49 +0600
+
+3	1	.gitignore
+4945	0	frontend/package-lock.json
+a8a59baf184c81bc5e6280869a2937d9f0c3fb0d|feat: Initialize Test Smell Rank project with backend and frontend setup|2025-12-21 00:20:51 +0600
+
+1	0	.gitignore
+156	0	README.md
+5	0	backend/.env
+5	0	backend/.env.example
+71	0	backend/README.md
+48	0	backend/auth.py
+13	0	backend/config.py
+6	0	backend/database.py
+25	0	backend/main.py
+25	0	backend/models.py
+11	0	backend/requirements.txt
+64	0	backend/routes/auth.py
+77	0	frontend/README.md
+13	0	frontend/index.html
+28	0	frontend/package.json
+36	0	frontend/src/App.jsx
+32	0	frontend/src/components/ProtectedRoute.jsx
+58	0	frontend/src/context/AuthContext.jsx
+15	0	frontend/src/index.css
+10	0	frontend/src/main.jsx
+115	0	frontend/src/pages/Auth.css
+202	0	frontend/src/pages/Dashboard.css
+108	0	frontend/src/pages/Dashboard.jsx
+90	0	frontend/src/pages/Login.jsx
+112	0	frontend/src/pages/Register.jsx
+50	0	frontend/src/services/api.js
+16	0	frontend/vite.config.js
+cb37fafc88927664b3bacc696a611795b3f7c922|Initial commit: test smell detection project setup|2025-12-20 23:49:11 +0600
+
+23	0	.flake8
+20	0	.jscpdrc
+100	0	analyze_smells_by_file.py
+102	0	check_pytest_smell_detection.py
+1	0	debug.log
+474	0	examples.py
+12	0	requirements.txt
+303	0	run_pytest_smell_library.py
+165	0	smell_report.json
+0	0	src/calculator.py
+226	0	tests/test_all_11_smells.py
+279	0	tests/test_all_21_smells.py
+5	0	tests/test_arithmetic.py
+2	0	tests/test_assertionless.py
+6	0	tests/test_conditional.py
+6	0	tests/test_constructor.py
+9	0	tests/test_duplication.py
+7	0	tests/test_empty.py
+5	0	tests/test_exception.py
+8	0	tests/test_flaky.py
+3	0	tests/test_harcoded.py
+7	0	tests/test_lazy.py
+2	0	tests/test_magic.py
+2	0	tests/test_resource.py
+5	0	tests/test_slow.py
+2	0	tests/test_unknown.py
+6	0	tests/test_verbose.py
+629	0	unified_smell_detector.py
+1184	0	unified_smell_report.json

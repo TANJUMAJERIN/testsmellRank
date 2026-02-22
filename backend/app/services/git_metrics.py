@@ -21,6 +21,7 @@ Where rho is Spearman rank correlation coefficient, computed across all
 test files in the repository (one data point per file).
 """
 
+import re
 import subprocess
 from pathlib import Path
 from typing import List, Dict, Optional, Set
@@ -82,7 +83,7 @@ def extract_git_history(repo_path: Path) -> List[Dict]:
             line = line.rstrip()
 
             # Commit header line: "HASH|subject|date"
-            if '|' in line and not line[0].isdigit() and line[0] != '-':
+            if '|' in line and len(line) > 40 and re.match(r'^[0-9a-f]{7,40}\|', line):
                 if current_commit:
                     commits.append(current_commit)
                 parts = line.split('|', 2)
