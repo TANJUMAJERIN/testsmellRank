@@ -32,7 +32,7 @@
   gap: 16px;
 }
 .user-name {
-  color: #555;
+  color: #374151;
   font-weight: 600;
   font-size: 15px;
 }
@@ -122,7 +122,7 @@
 }
 
 .loading-container p {
-  color: #666;
+  color: #374151;
   font-size: 1.1rem;
 }
 
@@ -234,7 +234,7 @@
 .smell-breakdown h3 {
   font-size: 1.5rem;
   margin-bottom: 1.5rem;
-  color: #333;
+  color: #1a1a2e;
   font-weight: 700;
 }
 
@@ -266,7 +266,7 @@
 
 .smell-type-name {
   font-weight: 600;
-  color: #333;
+  color: #1a1a2e;
   font-size: 0.95rem;
   flex: 1;
 }
@@ -299,14 +299,14 @@
 
 .smell-type-percentage {
   font-size: 0.85rem;
-  color: #666;
+  color: #4b5563;
   font-weight: 500;
 }
 
 .smell-details h3 {
   font-size: 1.5rem;
   margin-bottom: 1.5rem;
-  color: #333;
+  color: #1a1a2e;
   font-weight: 700;
 }
 
@@ -384,14 +384,14 @@
 
 .line-cell {
   text-align: center;
-  color: #666;
+  color: #374151;
   font-family: "Courier New", monospace;
   font-weight: 600;
-  background: #fafbfc;
+  background: #f0f3ff;
 }
 
 .message-cell {
-  color: #555;
+  color: #374151;
   max-width: 400px;
   word-wrap: break-word;
   line-height: 1.5;
@@ -523,7 +523,7 @@
 
 .stat-label {
   font-size: 0.9rem;
-  color: #666;
+  color: #4b5563;
   font-weight: 500;
 }
 
@@ -586,7 +586,7 @@
 
 .smell-name-cell {
   font-weight: 600;
-  color: #333;
+  color: #1a1a2e;
 }
 
 .score-cell {

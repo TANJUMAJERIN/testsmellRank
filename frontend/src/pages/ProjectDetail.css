@@ -37,7 +37,7 @@
   gap: 1rem;
 }
 .user-name {
-  color: #555;
+  color: #374151;
   font-weight: 600;
   font-size: 15px;
 }
@@ -87,12 +87,12 @@
   border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
-  color: #666;
+  color: #4b5563;
   cursor: pointer;
   text-align: left;
   transition: background 0.15s, color 0.15s;
 }
-.sidebar-item:hover { background: #f0f2f7; color: #333; }
+.sidebar-item:hover { background: #f0f0ff; color: #667eea; }
 .sidebar-icon { font-size: 18px; }
 
 /*  Content  */
@@ -287,8 +287,9 @@
   overflow-x: auto;
 }
 .compare-hint {
-  color: #6b7280;
+  color: #374151;
   font-size: 13px;
+  font-weight: 500;
   margin: 0 0 16px;
 }
 .runs-table {
@@ -296,30 +297,34 @@
   border-collapse: collapse;
   font-size: 14px;
 }
+.runs-table thead tr {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
 .runs-table th {
   text-align: left;
   padding: 10px 14px;
-  border-bottom: 2px solid #e5e7eb;
-  color: #9ca3af;
+  border-bottom: 2px solid transparent;
+  color: #fff;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: .05em;
 }
 .runs-table tbody tr {
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid #e8eaf0;
   transition: background .15s;
 }
-.runs-table tbody tr:hover { background: #f8fafc; }
+.runs-table tbody tr:hover { background: #f0f3ff; }
 .runs-table tbody tr.row-selected { background: #ede9fe; }
 .runs-table td {
   padding: 14px;
   vertical-align: middle;
+  color: #374151;
 }
 .runs-table tr:last-child td { border-bottom: none; }
 
 .run-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: #667eea; }
 .run-number   { font-weight: 700; color: #667eea; font-size: 15px; }
-.run-date     { color: #6b7280; font-size: 13px; }
+.run-date     { color: #374151; font-size: 13px; font-weight: 500; }
 
 /*  Status chips  */
 .status-chip      { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }

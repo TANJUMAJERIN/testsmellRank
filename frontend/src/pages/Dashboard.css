@@ -39,7 +39,7 @@
 }
 
 .user-name {
-  color: #555;
+  color: #374151;
   font-weight: 600;
   font-size: 15px;
 }
@@ -92,14 +92,14 @@
   border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
-  color: #666;
+  color: #4b5563;
   cursor: pointer;
   text-align: left;
   transition: background 0.15s, color 0.15s;
 }
-.sidebar-item:hover { background: #f0f2f7; color: #333; }
+.sidebar-item:hover { background: #f0f0ff; color: #667eea; }
 .sidebar-item.active {
-  background: linear-gradient(135deg, rgba(102,126,234,0.12), rgba(118,75,162,0.12));
+  background: linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
   color: #667eea;
 }
 .sidebar-icon { font-size: 18px; }
@@ -130,8 +130,9 @@
 
 .content-subtitle {
   font-size: 14px;
-  color: #888;
+  color: #667eea;
   margin: 0;
+  font-weight: 500;
 }
 
 /* ── New Project button ────────────────────────────────────────── */
@@ -164,8 +165,8 @@
 }
 
 .projects-table thead tr {
-  background: #f7f8fc;
-  border-bottom: 2px solid #eef0f6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-bottom: none;
 }
 
 .projects-table th {
@@ -175,45 +176,50 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #999;
+  color: #fff;
 }
 
 .projects-table td {
   padding: 16px 18px;
-  border-bottom: 1px solid #f0f2f8;
+  border-bottom: 1px solid #e8eaf0;
   vertical-align: middle;
+  color: #374151;
 }
 
 .projects-table tbody tr:last-child td { border-bottom: none; }
-.projects-table tbody tr:hover { background: #fafbff; }
+.projects-table tbody tr:hover { background: #f0f3ff; }
 
-.col-index { color: #bbb; width: 40px; font-weight: 600; }
+.col-index { color: #667eea; width: 40px; font-weight: 700; font-size: 15px; }
 
 .project-name-cell {
   font-weight: 700;
   color: #1a1a2e;
   font-size: 15px;
+  cursor: pointer;
+  transition: color 0.15s;
 }
+.project-name-cell:hover { color: #667eea; }
 
 .col-repo .repo-link {
   color: #667eea;
   text-decoration: none;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
 }
-.col-repo .repo-link:hover { text-decoration: underline; }
+.col-repo .repo-link:hover { text-decoration: underline; color: #764ba2; }
 
 .run-count-badge {
   display: inline-block;
-  background: #eef0ff;
-  color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
   font-size: 12px;
   font-weight: 700;
-  padding: 4px 12px;
+  padding: 5px 14px;
   border-radius: 20px;
+  box-shadow: 0 2px 6px rgba(102,126,234,0.3);
 }
 
-.col-date { color: #888; font-size: 13px; white-space: nowrap; }
+.col-date { color: #374151; font-size: 13px; font-weight: 500; white-space: nowrap; }
 .col-actions { white-space: nowrap; }
 
 .action-btn {
@@ -221,11 +227,13 @@
   border: none;
   cursor: pointer;
   font-size: 17px;
-  padding: 6px 8px;
+  padding: 7px 9px;
   border-radius: 8px;
   transition: background 0.15s, transform 0.15s;
   line-height: 1;
 }
+.action-btn.view-btn:hover { background: #eef0ff; transform: translateY(-1px); }
+.action-btn.del-btn:hover  { background: #fee2e2; transform: translateY(-1px); }
 
 
 /* ── Empty state ───────────────────────────────────────────────── */
@@ -237,8 +245,8 @@
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
 }
 .empty-icon { font-size: 52px; margin-bottom: 14px; }
-.empty-state h3 { color: #333; font-size: 20px; margin: 0 0 8px; }
-.empty-state p  { color: #888; font-size: 15px; margin: 0; }
+.empty-state h3 { color: #1a1a2e; font-size: 20px; margin: 0 0 8px; font-weight: 700; }
+.empty-state p  { color: #6b7280; font-size: 15px; margin: 0; }
 
 /* ── Loading ───────────────────────────────────────────────────── */
 .loading-container {
@@ -246,7 +254,8 @@
   flex-direction: column;
   align-items: center;
   padding: 64px;
-  color: #aaa;
+  color: #667eea;
+  font-weight: 600;
 }
 .spinner {
   width: 36px; height: 36px;
@@ -271,13 +280,13 @@
   border: 2px solid #dde1f0;
   border-radius: 10px;
   background: #fff;
-  color: #666;
+  color: #4b5563;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
-.quick-mode-btn:hover { border-color: #667eea; color: #667eea; }
+.quick-mode-btn:hover { border-color: #667eea; color: #667eea; background: #f0f0ff; }
 .quick-mode-btn.active {
   border-color: #667eea;
   background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
@@ -452,7 +461,7 @@
 }
 
 .user-name {
-  color: #333;
+  color: #374151;
   font-weight: 600;
   font-size: 16px;
 }

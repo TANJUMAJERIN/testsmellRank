@@ -27,7 +27,7 @@
 }
 .navbar-title { color: #667eea; font-size: 1.4rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
 .navbar-right { display: flex; align-items: center; gap: 16px; }
-.user-name { color: #555; font-weight: 600; font-size: 15px; }
+.user-name { color: #374151; font-weight: 600; font-size: 15px; }
 .logout-button {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
@@ -59,16 +59,16 @@
 
 .back-button {
   background: white;
-  border: 1.5px solid #ddd;
-  color: #555;
+  border: 1.5px solid #c7d2fe;
+  color: #667eea;
   padding: 8px 18px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.88rem;
-  font-weight: 500;
-  transition: border-color 0.2s, color 0.2s;
+  font-weight: 600;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
-.back-button:hover { border-color: #667eea; color: #667eea; }
+.back-button:hover { border-color: #667eea; color: #764ba2; background: #f0f3ff; }
 
 .qr-title {
   font-size: 1.6rem;
@@ -77,9 +77,10 @@
   font-weight: 700;
 }
 .qr-subtitle {
-  color: #888;
+  color: #667eea;
   margin: 0;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 /* ── summary stats ── */
@@ -103,7 +104,8 @@
 }
 .qr-stat-card .stat-lbl {
   font-size: 0.8rem;
-  color: #888;
+  color: #4b5563;
+  font-weight: 500;
   margin-top: 2px;
 }
 .qr-stat-card.c-red .stat-num    { color: #e53935; }
@@ -259,11 +261,11 @@
 }
 
 .qr-table th {
-  background: #f4f6fb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 12px 14px;
   text-align: left;
   font-weight: 700;
-  color: #555;
+  color: #fff;
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -272,13 +274,13 @@
 
 .qr-table td {
   padding: 13px 14px;
-  border-bottom: 1px solid #f0f0f0;
-  color: #333;
+  border-bottom: 1px solid #e8eaf0;
+  color: #374151;
 }
 
 .qr-table tr:last-child td { border-bottom: none; }
 
-.qr-table tr:hover td { background: #fafbff; }
+.qr-table tr:hover td { background: #f0f3ff; }
 
 .smell-abbr-col {
   background: linear-gradient(135deg, #667eea, #764ba2);
@@ -372,7 +374,7 @@
   padding: 14px 18px;
   margin-bottom: 24px;
   font-size: 0.85rem;
-  color: #555;
+  color: #374151;
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
