@@ -17,6 +17,9 @@ const ProjectDetail = () => {
   const [error, setError] = useState("");
   const [selectedRuns, setSelectedRuns] = useState([]);
   const [deleteRunConfirm, setDeleteRunConfirm] = useState(null);
+  const [surveyPanelRunId, setSurveyPanelRunId] = useState(null);
+  const [surveyData, setSurveyData] = useState({}); // { runId: surveyDoc }
+  const [surveyLoading, setSurveyLoading] = useState({}); // { runId: bool }
 
   useEffect(() => {
     fetchData();
@@ -46,7 +49,9 @@ const ProjectDetail = () => {
       const run = await projectsAPI.triggerRun(projectId);
       setRuns((prev) => [run, ...prev]);
     } catch (err) {
-      setError(err.response?.data?.detail || "Analysis failed. Please try again.");
+      setError(
+        err.response?.data?.detail || "Analysis failed. Please try again.",
+      );
     } finally {
       setRunLoading(false);
     }
@@ -91,7 +96,44 @@ const ProjectDetail = () => {
 
   const handleCompare = () => {
     if (selectedRuns.length !== 2) return;
-    navigate(`/project/${projectId}/compare?run1=${selectedRuns[0]}&run2=${selectedRuns[1]}`);
+    navigate(
+      `/project/${projectId}/compare?run1=${selectedRuns[0]}&run2=${selectedRuns[1]}`,
+    );
+  };
+
+  const handleToggleSurveyPanel = async (runId) => {
+    if (surveyPanelRunId === runId) {
+      setSurveyPanelRunId(null);
+      return;
+    }
+    setSurveyPanelRunId(runId);
+    // Load existing survey status if not already loaded
+    if (!surveyData[runId]) {
+      setSurveyLoading((prev) => ({ ...prev, [runId]: true }));
+      try {
+        const data = await projectsAPI.getSurveyStatus(projectId, runId);
+        // exists:false means no survey started yet — leave surveyData null so panel shows Send button
+        if (data.exists !== false) {
+          setSurveyData((prev) => ({ ...prev, [runId]: data }));
+        }
+      } catch {
+        // network error — ignore, panel will show Send button
+      } finally {
+        setSurveyLoading((prev) => ({ ...prev, [runId]: false }));
+      }
+    }
+  };
+
+  const handleStartSurvey = async (runId) => {
+    setSurveyLoading((prev) => ({ ...prev, [runId]: true }));
+    try {
+      const data = await projectsAPI.startSurvey(projectId, runId);
+      setSurveyData((prev) => ({ ...prev, [runId]: data }));
+    } catch (err) {
+      setError(err.response?.data?.detail || "Failed to start survey");
+    } finally {
+      setSurveyLoading((prev) => ({ ...prev, [runId]: false }));
+    }
   };
 
   const handleLogout = () => {
@@ -113,8 +155,8 @@ const ProjectDetail = () => {
   const statusChip = (status) => {
     const map = {
       completed: { label: "Completed", cls: "status-completed" },
-      pending:   { label: "Pending",   cls: "status-pending"   },
-      failed:    { label: "Failed",    cls: "status-failed"    },
+      pending: { label: "Pending", cls: "status-pending" },
+      failed: { label: "Failed", cls: "status-failed" },
     };
     const s = map[status] || { label: status, cls: "" };
     return <span className={`status-chip ${s.cls}`}>{s.label}</span>;
@@ -139,7 +181,10 @@ const ProjectDetail = () => {
 
       <div className="pd-content">
         <div className="pd-header">
-          <button className="back-button" onClick={() => navigate("/dashboard")}>
+          <button
+            className="back-button"
+            onClick={() => navigate("/dashboard")}
+          >
             Back to Dashboard
           </button>
           <div className="pd-title-row">
@@ -156,7 +201,9 @@ const ProjectDetail = () => {
               disabled={runLoading}
             >
               {runLoading ? (
-                <><span className="btn-spinner"></span> Analyzing</>
+                <>
+                  <span className="btn-spinner"></span> Analyzing
+                </>
               ) : (
                 "Run Analysis"
               )}
@@ -165,7 +212,10 @@ const ProjectDetail = () => {
           {runLoading && (
             <div className="run-progress">
               <div className="spinner"></div>
-              <p>Cloning repository and analyzing test smells this may take a minute.</p>
+              <p>
+                Cloning repository and analyzing test smells this may take a
+                minute.
+              </p>
             </div>
           )}
           {error && <div className="error-message">{error}</div>}
@@ -200,11 +250,16 @@ const ProjectDetail = () => {
           <div className="empty-state">
             <div className="empty-icon"></div>
             <h3>No runs yet</h3>
-            <p>Click "Run Analysis" to perform the first analysis of this repository.</p>
+            <p>
+              Click "Run Analysis" to perform the first analysis of this
+              repository.
+            </p>
           </div>
         ) : (
           <div className="runs-table-wrapper">
-            <p className="compare-hint">Tick two checkboxes to compare runs side by side.</p>
+            <p className="compare-hint">
+              Tick two checkboxes to compare runs side by side.
+            </p>
             <table className="runs-table">
               <thead>
                 <tr>
@@ -215,11 +270,17 @@ const ProjectDetail = () => {
                   <th>Files</th>
                   <th>Smells</th>
                   <th>Action</th>
+                  <th>Survey</th>
                 </tr>
               </thead>
               <tbody>
                 {runs.map((run) => (
-                  <tr key={run.id} className={selectedRuns.includes(run.id) ? "row-selected" : ""}>
+                  <tr
+                    key={run.id}
+                    className={
+                      selectedRuns.includes(run.id) ? "row-selected" : ""
+                    }
+                  >
                     <td>
                       {run.status === "completed" && (
                         <input
@@ -230,19 +291,26 @@ const ProjectDetail = () => {
                         />
                       )}
                     </td>
-                    <td><span className="run-number">#{run.run_number}</span></td>
+                    <td>
+                      <span className="run-number">#{run.run_number}</span>
+                    </td>
                     <td className="run-date">{formatDate(run.created_at)}</td>
                     <td>{statusChip(run.status)}</td>
                     <td>{run.summary?.total_files ?? ""}</td>
                     <td>{run.summary?.total_smells ?? ""}</td>
                     <td className="action-cell">
                       {run.status === "completed" && (
-                        <button className="view-btn" onClick={() => handleViewRun(run.id)}>
+                        <button
+                          className="view-btn"
+                          onClick={() => handleViewRun(run.id)}
+                        >
                           View Results
                         </button>
                       )}
                       {run.status === "failed" && (
-                        <span className="error-hint" title={run.error}>Failed</span>
+                        <span className="error-hint" title={run.error}>
+                          Failed
+                        </span>
                       )}
                       <button
                         className="del-run-btn"
@@ -252,24 +320,71 @@ const ProjectDetail = () => {
                         Delete
                       </button>
                     </td>
+                    <td>
+                      {run.status === "completed" && (
+                        <button
+                          className="view-btn"
+                          style={{
+                            background:
+                              surveyPanelRunId === run.id
+                                ? "#764ba2"
+                                : undefined,
+                          }}
+                          onClick={() => handleToggleSurveyPanel(run.id)}
+                        >
+                          {surveyPanelRunId === run.id
+                            ? "Hide Survey"
+                            : "Survey"}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+
+        {/* ── Survey Panel — shown when a run's Survey button is clicked ── */}
+        {surveyPanelRunId && (
+          <SurveyPanel
+            projectId={projectId}
+            runId={surveyPanelRunId}
+            survey={surveyData[surveyPanelRunId] || null}
+            loading={surveyLoading[surveyPanelRunId] || false}
+            onStart={() => handleStartSurvey(surveyPanelRunId)}
+            onViewQuadrant={() =>
+              navigate(
+                `/project/${projectId}/runs/${surveyPanelRunId}/quadrant`,
+              )
+            }
+          />
+        )}
       </div>
+      {/* end pd-content */}
 
       {deleteRunConfirm && (
-        <div className="modal-overlay" onClick={() => setDeleteRunConfirm(null)}>
-          <div className="modal-box confirm-box" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => setDeleteRunConfirm(null)}
+        >
+          <div
+            className="modal-box confirm-box"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3>Delete Run?</h3>
             <p>This will permanently delete this run and its results.</p>
             <div className="confirm-actions">
-              <button className="btn-danger" onClick={() => handleDeleteRun(deleteRunConfirm)}>
+              <button
+                className="btn-danger"
+                onClick={() => handleDeleteRun(deleteRunConfirm)}
+              >
                 Delete
               </button>
-              <button className="btn-secondary" onClick={() => setDeleteRunConfirm(null)}>
+              <button
+                className="btn-secondary"
+                onClick={() => setDeleteRunConfirm(null)}
+              >
                 Cancel
               </button>
             </div>
@@ -281,3 +396,192 @@ const ProjectDetail = () => {
 };
 
 export default ProjectDetail;
+
+// ── Survey Panel ─────────────────────────────────────────────────────────────
+const SurveyPanel = ({
+  projectId,
+  runId,
+  survey,
+  loading,
+  onStart,
+  onViewQuadrant,
+}) => {
+  const submitted = survey?.submitted_count ?? 0;
+  const total = survey?.total ?? 0;
+  const hasSurvey = !!survey;
+  const hasDDS = !!survey?.dds;
+  const dispatchInfo = survey?.email_dispatch;
+
+  return (
+    <div
+      style={{
+        margin: "20px 0 4px",
+        background: "#f8f7ff",
+        border: "1.5px solid #d0caf5",
+        borderRadius: "12px",
+        padding: "24px",
+      }}
+    >
+      <h3 style={{ margin: "0 0 6px", color: "#4a3fa0", fontSize: "1rem" }}>
+        🧑‍💻 Developer Survey
+      </h3>
+      <p style={{ margin: "0 0 16px", color: "#777", fontSize: "0.85rem" }}>
+        Send a perception survey to contributors extracted from this run's git
+        history. Their 1–5 Likert ratings produce a Developer-Driven Score (DDS)
+        combined with the empirical Prioritization Score (PS) to classify smells
+        into the Technical Debt Quadrant.
+      </p>
+
+      {loading && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            color: "#667eea",
+          }}
+        >
+          <span
+            style={{
+              width: 20,
+              height: 20,
+              border: "3px solid #e0e0e0",
+              borderTopColor: "#667eea",
+              borderRadius: "50%",
+              display: "inline-block",
+              animation: "spin 0.75s linear infinite",
+            }}
+          />
+          Loading survey status…
+        </div>
+      )}
+
+      {!loading && (
+        <>
+          {/* No survey yet */}
+          {!hasSurvey && (
+            <button
+              onClick={onStart}
+              style={{
+                background: "linear-gradient(135deg, #667eea, #764ba2)",
+                color: "white",
+                border: "none",
+                padding: "10px 24px",
+                borderRadius: "8px",
+                fontWeight: 700,
+                fontSize: "0.9rem",
+                cursor: "pointer",
+              }}
+            >
+              📧 Send Survey to Contributors
+            </button>
+          )}
+
+          {/* Survey already exists */}
+          {hasSurvey && (
+            <div>
+              {/* Email dispatch result */}
+              {dispatchInfo && (
+                <div
+                  style={{
+                    background: dispatchInfo.skipped ? "#fff8e1" : "#e8f5e9",
+                    border: `1px solid ${dispatchInfo.skipped ? "#ffe082" : "#a5d6a7"}`,
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                    marginBottom: 14,
+                    fontSize: "0.85rem",
+                    color: dispatchInfo.skipped ? "#795548" : "#2e7d32",
+                  }}
+                >
+                  {dispatchInfo.skipped
+                    ? "⚠️ Email credentials not configured — survey links were created but emails were not sent. Configure MAIL_USERNAME / MAIL_PASSWORD in .env to enable sending."
+                    : `✅ ${dispatchInfo.sent} email(s) sent · ${dispatchInfo.failed} failed`}
+                </div>
+              )}
+
+              {/* Contributors */}
+              <div style={{ marginBottom: 16 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    color: "#444",
+                    marginBottom: 8,
+                    fontSize: "0.88rem",
+                  }}
+                >
+                  Contributors ({total}) — {submitted} submitted /{" "}
+                  {total - submitted} pending
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {(survey.contributors || []).map((c) => (
+                    <span
+                      key={c.email}
+                      style={{
+                        background: c.submitted ? "#e8f5e9" : "#f5f5f5",
+                        border: `1px solid ${c.submitted ? "#a5d6a7" : "#ddd"}`,
+                        borderRadius: 20,
+                        padding: "4px 12px",
+                        fontSize: "0.8rem",
+                        color: c.submitted ? "#2e7d32" : "#666",
+                      }}
+                    >
+                      {c.submitted ? "✓ " : "⏳ "}
+                      {c.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  onClick={onStart}
+                  style={{
+                    background: "white",
+                    border: "1.5px solid #667eea",
+                    color: "#667eea",
+                    padding: "8px 18px",
+                    borderRadius: 8,
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  🔄 Re-send Survey
+                </button>
+                {hasDDS && (
+                  <button
+                    onClick={onViewQuadrant}
+                    style={{
+                      background: "linear-gradient(135deg, #667eea, #764ba2)",
+                      border: "none",
+                      color: "white",
+                      padding: "8px 18px",
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    📊 View Quadrant Results
+                  </button>
+                )}
+                {!hasDDS && (
+                  <span
+                    style={{
+                      fontSize: "0.82rem",
+                      color: "#aaa",
+                      alignSelf: "center",
+                    }}
+                  >
+                    Quadrant results will appear after the first submission
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
