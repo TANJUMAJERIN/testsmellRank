@@ -1,10 +1,22 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth import router as auth_router
 from app.routes.upload import router as upload_router
 from app.routes.projects import router as projects_router
+from app.routes.survey import router as survey_router
+from app.core.database import survey_responses_collection
 
-app = FastAPI(title="Test Smell Rank API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Create MongoDB indexes on startup."""
+    await survey_responses_collection.create_index("run_id")
+    yield
+
+
+app = FastAPI(title="Test Smell Rank API", lifespan=lifespan)
 
 # Configure CORS
 app.add_middleware(
@@ -19,6 +31,8 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(upload_router)
 app.include_router(projects_router)
+app.include_router(survey_router)
+
 
 @app.get("/")
 async def root():

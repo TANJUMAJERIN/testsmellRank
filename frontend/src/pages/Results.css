@@ -132,7 +132,9 @@
   border-radius: 16px;
   color: white;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .summary-card:hover {
@@ -202,7 +204,9 @@
   padding: 1.25rem;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .smell-type-card:hover {
@@ -763,5 +767,527 @@
 
   .metrics-legend li {
     font-size: 0.85rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DEVELOPER SURVEY MODULE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Survey Control Strip ─────────────────────────────────────────────────── */
+.survey-control-strip {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 2.5rem;
+  color: #e2e8f0;
+}
+
+.survey-strip-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.survey-strip-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.survey-status-badge {
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.badge-not_sent {
+  background: rgba(100, 116, 139, 0.25);
+  color: #94a3b8;
+  border: 1px solid #475569;
+}
+.badge-sent {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid #3b82f6;
+}
+.badge-completed {
+  background: rgba(52, 211, 153, 0.2);
+  color: #6ee7b7;
+  border: 1px solid #34d399;
+}
+
+.survey-strip-desc {
+  color: #94a3b8;
+  font-size: 0.92rem;
+  margin: 0 0 16px;
+  line-height: 1.6;
+}
+
+.survey-progress-wrap {
+  margin-bottom: 14px;
+}
+
+.survey-progress-label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.survey-progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.survey-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+.survey-url-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  word-break: break-all;
+}
+
+.survey-url-label {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.survey-url-link {
+  color: #60a5fa;
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+.survey-url-link:hover {
+  text-decoration: underline;
+}
+
+.survey-strip-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.survey-btn {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
+  font-family: inherit;
+}
+
+.survey-btn:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+.survey-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.send-btn {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+}
+.refresh-btn {
+  background: rgba(100, 116, 139, 0.3);
+  color: #cbd5e1;
+}
+.force-btn {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.survey-msg {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.survey-msg-ok {
+  color: #4ade80;
+}
+.survey-msg-err {
+  color: #f87171;
+}
+
+/* ── See Developer Driven Score button ──────────────────────────────────── */
+.see-dds-wrap {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.see-dds-btn {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #fff !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  padding: 12px 28px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4) !important;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+  animation: pulse-dds 2.5s ease-in-out infinite;
+}
+.see-dds-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5) !important;
+}
+@keyframes pulse-dds {
+  0%,
+  100% {
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 26px rgba(16, 185, 129, 0.7);
+  }
+}
+
+.see-dds-hint {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* ── Poll indicator & loading badge ─────────────────────────────────────── */
+.poll-indicator {
+  color: #60a5fa;
+  font-size: 0.82em;
+  animation: fade-poll 1.5s ease-in-out infinite;
+}
+@keyframes fade-poll {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.badge-loading {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* ── DDS Table ────────────────────────────────────────────────────────────── */
+.dds-section {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.dds-section h3 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.dds-desc {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0 0 20px;
+}
+
+.dds-table-wrap {
+  overflow-x: auto;
+}
+
+.dds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.dds-table th {
+  background: #f8fafc;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 700;
+  color: #475569;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.dds-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.dds-table tr:hover td {
+  background: #f8fafc;
+}
+
+.dds-abbr {
+  display: inline-block;
+  background: #eff6ff;
+  color: #3b82f6;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.dds-bar-track {
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 120px;
+}
+
+.dds-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 999px;
+}
+
+/* ── Technical Debt Quadrant ──────────────────────────────────────────────── */
+.quadrant-section {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.quadrant-section h3 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.quadrant-desc {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0 0 24px;
+}
+
+/* 2×2 grid */
+.quadrant-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.quadrant-cell {
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid transparent;
+}
+
+/* Quadrant color themes */
+.q-pd {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border-color: #f87171;
+} /* HIGH — red */
+.q-rd {
+  background: linear-gradient(135deg, #fff7ed, #fed7aa);
+  border-color: #fb923c;
+} /* MODERATE-HIGH — orange */
+.q-pi {
+  background: linear-gradient(135deg, #fefce8, #fef08a);
+  border-color: #facc15;
+} /* MODERATE-LOW — yellow */
+.q-ri {
+  background: linear-gradient(135deg, #f0fdf4, #bbf7d0);
+  border-color: #4ade80;
+} /* LOW — green */
+
+.qcell-header {
+  margin-bottom: 6px;
+}
+
+.qcell-name {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.qcell-axes {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.qcell-priority-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.qcell-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qcell-chip {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1e293b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: "JetBrains Mono", monospace;
+  cursor: default;
+}
+
+.qcell-empty {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+/* Quadrant detail table */
+.quadrant-table-wrap {
+  overflow-x: auto;
+}
+
+.quadrant-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.quadrant-table th {
+  background: #f8fafc;
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #475569;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.quadrant-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.quadrant-table tr:hover td {
+  background: #f8fafc;
+}
+
+.qt-abbr {
+  display: inline-block;
+  background: #eff6ff;
+  color: #3b82f6;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-family: "JetBrains Mono", monospace;
+  margin-right: 6px;
+}
+
+.qt-name {
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.norm-pos {
+  color: #16a34a;
+  font-weight: 600;
+}
+.norm-neg {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* Priority badges in quadrant table */
+.priority-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.prio-high {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+.prio-mod-high {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fdba74;
+}
+.prio-mod-low {
+  background: #fefce8;
+  color: #a16207;
+  border: 1px solid #fde047;
+}
+.prio-low {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+@media (max-width: 640px) {
+  .quadrant-grid {
+    grid-template-columns: 1fr;
+  }
+  .survey-control-strip {
+    padding: 20px;
+  }
+  .survey-strip-actions {
+    flex-direction: column;
   }
 }

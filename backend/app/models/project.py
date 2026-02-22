@@ -1,6 +1,6 @@
 # app/models/project.py
 from pydantic import BaseModel, Field
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Dict
 from datetime import datetime
 
 
@@ -50,3 +50,32 @@ class CompareResponse(BaseModel):
     run2: RunResponse
     comparison: List[CompareSmellEntry]
     summary: dict  # improved, worsened, unchanged counts
+
+
+# ── Developer Survey Models ───────────────────────────────────────────────────
+
+class SurveySubmission(BaseModel):
+    """Payload sent by a developer filling in the survey."""
+    responses: Dict[str, int]  # abbreviation -> Likert rating 1-5
+
+
+class QuadrantEntry(BaseModel):
+    """Single smell's combined PS + DDS classification result."""
+    smellName: str
+    abbreviation: str
+    PS: float
+    DDS: float
+    normalizedPS: float
+    normalizedDDS: float
+    quadrant: str
+    priority: str
+
+
+class SurveyStatusResponse(BaseModel):
+    """Status of a run's developer survey."""
+    survey_status: str          # not_sent | sent | completed
+    total_sent: int             # number of contributor emails
+    total_submitted: int        # responses received so far
+    threshold_pct: float        # e.g. 50.0
+    dds_ready: bool             # True once DDS has been calculated
+    survey_url: Optional[str] = None

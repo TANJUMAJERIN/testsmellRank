@@ -9,10 +9,12 @@ from pathlib import Path
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.core.config import settings
 from app.core.database import projects_collection, runs_collection
 from app.core.security import get_current_user
 from app.models.project import ProjectCreate
 from app.services.smell_detection import detect_smells_for_project
+from app.services.survey_service import extract_contributor_emails, send_survey_emails
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -46,6 +48,10 @@ def _run_to_dict(doc: dict, include_analysis: bool = True) -> dict:
         "status": doc["status"],
         "summary": doc.get("summary"),
         "error": doc.get("error"),
+        # Survey fields
+        "survey_status": doc.get("survey_status", "not_sent"),
+        "survey_url":    doc.get("survey_url"),
+        "contributor_emails_count": len(doc.get("contributor_emails", [])),
     }
     if include_analysis:
         result["smell_analysis"] = doc.get("smell_analysis")
@@ -185,6 +191,39 @@ async def trigger_run(
             {"$set": {"status": "completed", "smell_analysis": smell_result, "summary": summary}},
         )
         run_doc.update({"_id": run_id, "status": "completed", "smell_analysis": smell_result, "summary": summary})
+
+        # ── Auto-send Developer Survey (non-fatal) ──────────────────────────
+        try:
+            contributor_emails = extract_contributor_emails(project_dir)
+            if contributor_emails:
+                survey_url = f"{settings.frontend_url}/survey/{str(run_id)}"
+                sent_count = await send_survey_emails(
+                    contributor_emails, survey_url, project["name"]
+                )
+                await runs_collection.update_one(
+                    {"_id": run_id},
+                    {
+                        "$set": {
+                            "survey_status":      "sent",
+                            "contributor_emails": contributor_emails,
+                            "survey_url":         survey_url,
+                        }
+                    },
+                )
+                run_doc.update({
+                    "survey_status":      "sent",
+                    "contributor_emails": contributor_emails,
+                    "survey_url":         survey_url,
+                })
+                print(
+                    f"[SURVEY] Auto-sent to {sent_count}/{len(contributor_emails)} "
+                    f"contributor(s) for run {run_id}"
+                )
+            else:
+                print(f"[SURVEY] No contributor emails found in repo {repo_name}")
+        except Exception as survey_err:
+            print(f"[SURVEY] Auto-send failed (non-fatal): {survey_err}")
+        # ── End auto-survey ──────────────────────────────────────────────────
 
     except Exception as e:
         await runs_collection.update_one(

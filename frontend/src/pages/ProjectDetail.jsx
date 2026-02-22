@@ -67,14 +67,9 @@ const ProjectDetail = () => {
   const handleViewRun = async (runId) => {
     try {
       const run = await projectsAPI.getRun(projectId, runId);
-      navigate("/results", {
-        state: {
-          projectData: {
-            ...run,
-            smell_analysis: run.smell_analysis,
-            project_name: project?.name,
-          },
-        },
+      // Navigate to the project-run URL so survey strip / polling are active
+      navigate(`/project/${projectId}/run/${runId}`, {
+        state: { runData: run },
       });
     } catch (err) {
       setError("Failed to load run details");

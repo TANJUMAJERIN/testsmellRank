@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Results from "./pages/Results";
 import ProjectDetail from "./pages/ProjectDetail";
 import Compare from "./pages/Compare";
+import Survey from "./pages/Survey";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -63,6 +64,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* Public survey page — no auth required */}
+          <Route path="/survey/:runId" element={<Survey />} />
         </Routes>
       </Router>
     </AuthProvider>

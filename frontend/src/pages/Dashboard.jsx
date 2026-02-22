@@ -118,7 +118,14 @@ const Dashboard = () => {
       const response = await uploadZipFile(zipFile);
       setZipFile(null);
       e.target.reset();
-      navigate("/results", { state: { projectData: response } });
+      // Navigate to the saved project-run page so the survey strip is available
+      if (response.project_id && response.run_id) {
+        navigate(`/project/${response.project_id}/run/${response.run_id}`, {
+          state: { runData: { id: response.run_id, smell_analysis: response.smell_analysis, run_number: 1 } },
+        });
+      } else {
+        navigate("/results", { state: { projectData: response } });
+      }
     } catch (err) {
       setZipError(err.response?.data?.detail || "Failed to upload ZIP file");
     } finally {
@@ -137,7 +144,14 @@ const Dashboard = () => {
     try {
       const response = await uploadGithubRepo(quickGithubUrl.trim());
       setQuickGithubUrl("");
-      navigate("/results", { state: { projectData: response } });
+      // Navigate to the saved project-run page so the survey strip is available
+      if (response.project_id && response.run_id) {
+        navigate(`/project/${response.project_id}/run/${response.run_id}`, {
+          state: { runData: { id: response.run_id, smell_analysis: response.smell_analysis, run_number: 1 } },
+        });
+      } else {
+        navigate("/results", { state: { projectData: response } });
+      }
     } catch (err) {
       setQuickGithubError(
         err.response?.data?.detail || "Failed to analyse repository",

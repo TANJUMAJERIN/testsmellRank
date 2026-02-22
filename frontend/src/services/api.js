@@ -154,4 +154,52 @@ export const projectsAPI = {
   },
 };
 
+// ── Developer Survey API ─────────────────────────────────────────────────────
+
+// Send survey emails to contributors (authenticated)
+export const sendSurvey = async (projectId, runId) => {
+  const response = await api.post(
+    `/projects/${projectId}/runs/${runId}/survey/send`
+  );
+  return response.data;
+};
+
+// Get response count / status (authenticated)
+export const getSurveyStatus = async (projectId, runId) => {
+  const response = await api.get(
+    `/projects/${projectId}/runs/${runId}/survey/status`
+  );
+  return response.data;
+};
+
+// Load the survey form — public, no auth header needed
+export const getSurveyData = async (runId) => {
+  const response = await axios.get(`/api/survey/${runId}`);
+  return response.data;
+};
+
+// Submit developer ratings — public, no auth header needed
+export const submitSurvey = async (runId, responses) => {
+  const response = await axios.post(`/api/survey/submit/${runId}`, {
+    responses,
+  });
+  return response.data;
+};
+
+// Fetch DDS + quadrant results (authenticated)
+export const getSurveyResults = async (projectId, runId) => {
+  const response = await api.get(
+    `/projects/${projectId}/runs/${runId}/survey/results`
+  );
+  return response.data;
+};
+
+// Force-calculate DDS regardless of threshold (authenticated)
+export const forceCalculateDds = async (projectId, runId) => {
+  const response = await api.post(
+    `/projects/${projectId}/runs/${runId}/survey/calculate`
+  );
+  return response.data;
+};
+
 export default api;
