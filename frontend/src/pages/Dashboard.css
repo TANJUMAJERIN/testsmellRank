@@ -232,7 +232,6 @@
   transition: background 0.15s, transform 0.15s;
   line-height: 1;
 }
-.action-btn.view-btn:hover { background: #eef0ff; transform: translateY(-1px); }
 .action-btn.del-btn:hover  { background: #fee2e2; transform: translateY(-1px); }
 
 
