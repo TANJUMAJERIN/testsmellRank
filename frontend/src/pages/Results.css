@@ -341,13 +341,12 @@
 }
 
 .results-table tbody tr {
-  border-bottom: 1px solid #e8ecef;
+  border-bottom: 1px solid #d1d5db;
   transition: all 0.2s ease;
 }
 
 .results-table tbody tr:hover {
-  background: linear-gradient(90deg, #f8f9ff 0%, #fff 100%);
-  transform: scale(1.005);
+  background: #f8f9ff;
 }
 
 .results-table tbody tr:last-child {
@@ -364,16 +363,22 @@
 .file-cell {
   font-weight: 600;
   color: #667eea;
-  background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+  background: #f4f6ff;
   border-right: 3px solid #667eea;
+  border-top: 2px solid #c7d2fe;
   max-width: 250px;
   word-break: break-word;
+  vertical-align: top;
+}
+
+.results-table tr:has(.file-cell) td {
+  border-top: 2px solid #c7d2fe;
 }
 
 .smell-type-cell {
   font-weight: 700;
   color: #f5576c;
-  background: linear-gradient(90deg, #fff5f7 0%, #fff 100%);
+  background: #fff5f7;
   padding: 1rem 1.2rem;
 }
 
