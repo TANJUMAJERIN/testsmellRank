@@ -32,10 +32,16 @@ from .git_metrics import analyze_project_with_git
 # MAIN ENTRY POINT
 # =====================================================
 
-def detect_smells_for_project(project_path: Path, include_git_metrics: bool = True):
+def detect_smells_for_project(
+    project_path: Path,
+    include_git_metrics: bool = True,
+    cp_weight: float = 0.5,
+):
     """
     Detect all 15 paper-defined test smells across a project's test files.
     Optionally computes CP/FP/PS metrics from git history.
+
+    cp_weight: weight for CP in PS formula (default 0.5 = equal weighting).
     """
     test_files = (
         list(project_path.glob("**/test_*.py")) +
@@ -75,7 +81,7 @@ def detect_smells_for_project(project_path: Path, include_git_metrics: bool = Tr
     git_analysis = None
     if include_git_metrics and all_smell_instances:
         try:
-            git_analysis = analyze_project_with_git(project_path, all_smell_instances)
+            git_analysis = analyze_project_with_git(project_path, all_smell_instances, cp_weight)
         except Exception as exc:
             print(f"Git metrics calculation failed: {exc}")
             git_analysis = {"error": str(exc)}

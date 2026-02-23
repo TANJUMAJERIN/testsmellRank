@@ -32,6 +32,7 @@ def _project_to_dict(doc: dict, run_count: int = 0) -> dict:
         "user_id": str(doc["user_id"]),
         "name": doc["name"],
         "repo_url": doc["repo_url"],
+        "cp_weight": doc.get("cp_weight", 0.5),
         "created_at": doc["created_at"],
         "run_count": run_count,
     }
@@ -44,6 +45,7 @@ def _run_to_dict(doc: dict, include_analysis: bool = True) -> dict:
         "run_number": doc["run_number"],
         "created_at": doc["created_at"],
         "status": doc["status"],
+        "cp_weight": doc.get("cp_weight", 0.5),
         "summary": doc.get("summary"),
         "error": doc.get("error"),
     }
@@ -70,6 +72,7 @@ async def create_project(
         "user_id": current_user["_id"],
         "name": body.name.strip(),
         "repo_url": repo_url,
+        "cp_weight": body.cp_weight,
         "created_at": datetime.now(timezone.utc),
     }
     result = await projects_collection.insert_one(doc)
@@ -143,6 +146,7 @@ async def trigger_run(
         "run_number": run_number,
         "created_at": datetime.now(timezone.utc),
         "status": "pending",
+        "cp_weight": project.get("cp_weight", 0.5),
         "summary": None,
         "smell_analysis": None,
         "error": None,
@@ -172,7 +176,10 @@ async def trigger_run(
             raise RuntimeError(clone_result.stderr)
 
         # Run smell detection
-        smell_result = detect_smells_for_project(project_dir)
+        smell_result = detect_smells_for_project(
+            project_dir,
+            cp_weight=project.get("cp_weight", 0.5),
+        )
 
         summary = {
             "total_files": smell_result.get("total_files", 0),

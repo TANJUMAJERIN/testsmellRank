@@ -47,14 +47,15 @@ export const authAPI = {
   },
 };
 
-export const uploadGithubRepo = async (repoUrl) => {
-  const response = await api.post("/upload/github", { repo_url: repoUrl });
+export const uploadGithubRepo = async (repoUrl, cpWeight = 0.5) => {
+  const response = await api.post("/upload/github", { repo_url: repoUrl, cp_weight: cpWeight });
   return response.data;
 };
 
-export const uploadZipFile = async (file) => {
+export const uploadZipFile = async (file, cpWeight = 0.5) => {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("cp_weight", cpWeight);
 
   const response = await api.post("/upload/zip", formData, {
     headers: {
@@ -65,8 +66,8 @@ export const uploadZipFile = async (file) => {
 };
 
 // ── Project management ──────────────────────────────────────────
-export const createProject = async (name, repoUrl) => {
-  const response = await api.post("/projects/", { name, repo_url: repoUrl });
+export const createProject = async (name, repoUrl, cpWeight = 0.5) => {
+  const response = await api.post("/projects/", { name, repo_url: repoUrl, cp_weight: cpWeight });
   return response.data;
 };
 
@@ -115,8 +116,8 @@ export const projectsAPI = {
     return response.data;
   },
 
-  create: async (name, repoUrl) => {
-    const response = await api.post("/projects/", { name, repo_url: repoUrl });
+  create: async (name, repoUrl, cpWeight = 0.5) => {
+    const response = await api.post("/projects/", { name, repo_url: repoUrl, cp_weight: cpWeight });
     return response.data;
   },
 

@@ -7,6 +7,7 @@ from datetime import datetime
 class ProjectCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     repo_url: str = Field(..., min_length=1)
+    cp_weight: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
 class ProjectResponse(BaseModel):

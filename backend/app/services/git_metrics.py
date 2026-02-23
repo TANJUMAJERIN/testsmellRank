@@ -349,13 +349,15 @@ def calculate_spearman_metrics(
     smell_instances: List[Dict],
     combined_vectors: Dict[str, Dict[str, float]],
     all_test_files: List[str],
+    cp_weight: float = 0.5,
 ) -> Dict[str, Dict]:
     """
     Core calculation - implements paper equations (1)-(5):
 
     CP(S) = rho(presence, chg_freq) + rho(presence, chg_ext)
     FP(S) = rho(presence, fault_freq) + rho(presence, fault_ext)
-    PS(S) = (CP(S) + FP(S)) / 2
+    PS(S) = cp_weight * CP(S) + (1 - cp_weight) * FP(S)
+           default cp_weight=0.5 reproduces the original (CP+FP)/2
     """
     smells_by_type: Dict[str, List[Dict]] = defaultdict(list)
     for inst in smell_instances:
@@ -384,7 +386,7 @@ def calculate_spearman_metrics(
 
         cp_score = rho_cf + rho_ce
         fp_score = rho_ff + rho_fe
-        ps_score = (cp_score + fp_score) / 2
+        ps_score = cp_weight * cp_score + (1 - cp_weight) * fp_score
 
         results[smell_type] = {
             'smell_type':   smell_type,
@@ -446,9 +448,14 @@ def rank_smells(metrics: Dict[str, Dict]) -> List[Dict]:
 def analyze_project_with_git(
     project_path: Path,
     smell_instances: List[Dict],
+    cp_weight: float = 0.5,
 ) -> Dict:
     """
     Full pipeline - call this from the service/API layer.
+
+    cp_weight: weight given to CP when computing PS.
+               PS = cp_weight * CP + (1 - cp_weight) * FP
+               Default 0.5 reproduces the original (CP+FP)/2.
 
     Returns:
         {
@@ -500,7 +507,8 @@ def analyze_project_with_git(
     )
 
     print("\n[STEP 6] Computing Spearman correlations (CP / FP / PS)...")
-    metrics = calculate_spearman_metrics(smell_instances, combined_vectors, all_test_files)
+    print(f"[PS]    cp_weight={cp_weight:.2f}  fp_weight={(1-cp_weight):.2f}")
+    metrics = calculate_spearman_metrics(smell_instances, combined_vectors, all_test_files, cp_weight)
 
     if not metrics:
         return {'error': 'No metrics could be computed. Check smell instances.', 'metrics': {}}
@@ -529,6 +537,8 @@ def analyze_project_with_git(
         'total_prod_files':      len(all_git_prod_files),
         'smell_types_analyzed':  len(metrics),
         'total_smell_instances': len(smell_instances),
+        'cp_weight':             round(cp_weight, 4),
+        'fp_weight':             round(1 - cp_weight, 4),
     }
 
     return {

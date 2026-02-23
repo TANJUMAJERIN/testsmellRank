@@ -18,6 +18,8 @@ const Dashboard = () => {
   const [newRepoUrl, setNewRepoUrl] = useState("");
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState("");
+  const [newCpWeight, setNewCpWeight] = useState(0.5);
+  const [useCustomCpWeight, setUseCustomCpWeight] = useState(false);
 
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
@@ -57,11 +59,14 @@ const Dashboard = () => {
       const project = await createProject(
         newProjectName.trim(),
         newRepoUrl.trim(),
+        newCpWeight,
       );
       setProjects((prev) => [project, ...prev]);
       setShowModal(false);
       setNewProjectName("");
       setNewRepoUrl("");
+      setNewCpWeight(0.5);
+      setUseCustomCpWeight(false);
       navigate(`/project/${project.id}`, {
         state: { projectName: project.name, repoUrl: project.repo_url },
       });
@@ -245,13 +250,13 @@ const Dashboard = () => {
 
       {/* ── New Project Modal ─────────────────────────────────── */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowModal(false); setNewCpWeight(0.5); setUseCustomCpWeight(false); }}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Create New Project</h3>
               <button
                 className="modal-close"
-                onClick={() => setShowModal(false)}
+                onClick={() => { setShowModal(false); setNewCpWeight(0.5); setUseCustomCpWeight(false); }}
               >
                 ✕
               </button>
@@ -277,6 +282,39 @@ const Dashboard = () => {
                 onChange={(e) => setNewRepoUrl(e.target.value)}
                 disabled={modalLoading}
               />
+              <label>Analysis Weight</label>
+              <span className="weight-hint">CP&#160;= how often smelly files are modified&#160;&middot;&#160;FP&#160;= how often they cause bugs</span>
+              <div className="weight-toggle-group">
+                <button
+                  type="button"
+                  className={`weight-toggle-btn${!useCustomCpWeight ? " active" : ""}`}
+                  onClick={() => { setUseCustomCpWeight(false); setNewCpWeight(0.5); }}
+                >
+                  Equal (50 / 50)
+                </button>
+                <button
+                  type="button"
+                  className={`weight-toggle-btn${useCustomCpWeight ? " active" : ""}`}
+                  onClick={() => setUseCustomCpWeight(true)}
+                >
+                  Custom
+                </button>
+              </div>
+              {useCustomCpWeight && (
+                <div className="weight-slider-row">
+                  <span className="weight-side">CP {Math.round(newCpWeight * 100)}%</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={newCpWeight}
+                    onChange={(e) => setNewCpWeight(parseFloat(e.target.value))}
+                    className="weight-slider"
+                  />
+                  <span className="weight-side">FP {Math.round((1 - newCpWeight) * 100)}%</span>
+                </div>
+              )}
               <button
                 type="submit"
                 className="upload-button"

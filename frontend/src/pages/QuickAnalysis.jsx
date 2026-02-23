@@ -20,6 +20,10 @@ const QuickAnalysis = () => {
   const [quickGithubLoading, setQuickGithubLoading] = useState(false);
   const [quickGithubError, setQuickGithubError] = useState("");
 
+  // CP/FP weight
+  const [cpWeight, setCpWeight] = useState(0.5);
+  const [useCustomWeight, setUseCustomWeight] = useState(false);
+
   const handleLogout = () => {
     logout();
     navigate("/login");
@@ -34,7 +38,7 @@ const QuickAnalysis = () => {
     setZipLoading(true);
     setZipError("");
     try {
-      const response = await uploadZipFile(zipFile);
+      const response = await uploadZipFile(zipFile, cpWeight);
       setZipFile(null);
       e.target.reset();
       navigate("/results", { state: { projectData: response } });
@@ -54,7 +58,7 @@ const QuickAnalysis = () => {
     setQuickGithubLoading(true);
     setQuickGithubError("");
     try {
-      const response = await uploadGithubRepo(quickGithubUrl.trim());
+      const response = await uploadGithubRepo(quickGithubUrl.trim(), cpWeight);
       setQuickGithubUrl("");
       navigate("/results", { state: { projectData: response } });
     } catch (err) {
@@ -65,6 +69,50 @@ const QuickAnalysis = () => {
       setQuickGithubLoading(false);
     }
   };
+
+  const weightSelector = (
+    <div className="weight-selector">
+      <div className="weight-selector-header">
+        <strong>Analysis Weight</strong>
+        <span className="weight-hint">
+          CP&#160;= how often smelly files are modified
+          &nbsp;·&nbsp;
+          FP&#160;= how often they cause bugs
+        </span>
+      </div>
+      <div className="weight-toggle-group">
+        <button
+          type="button"
+          className={`weight-toggle-btn${!useCustomWeight ? " active" : ""}`}
+          onClick={() => { setUseCustomWeight(false); setCpWeight(0.5); }}
+        >
+          Equal (50 / 50)
+        </button>
+        <button
+          type="button"
+          className={`weight-toggle-btn${useCustomWeight ? " active" : ""}`}
+          onClick={() => setUseCustomWeight(true)}
+        >
+          Custom
+        </button>
+      </div>
+      {useCustomWeight && (
+        <div className="weight-slider-row">
+          <span className="weight-side">CP {Math.round(cpWeight * 100)}%</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={cpWeight}
+            onChange={(e) => setCpWeight(parseFloat(e.target.value))}
+            className="weight-slider"
+          />
+          <span className="weight-side">FP {Math.round((1 - cpWeight) * 100)}%</span>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="dashboard-container">
@@ -170,6 +218,7 @@ const QuickAnalysis = () => {
                     )}
                   </label>
                 </div>
+                {weightSelector}
                 <button
                   type="submit"
                   className="upload-button"
@@ -211,6 +260,7 @@ const QuickAnalysis = () => {
                   disabled={quickGithubLoading}
                   style={{ width: "100%" }}
                 />
+                {weightSelector}
                 <button
                   type="submit"
                   className="upload-button"
