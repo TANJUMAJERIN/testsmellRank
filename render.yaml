@@ -26,3 +26,7 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      - key: RESEND_API_KEY
+        sync: false # from resend.com — bypasses Render SMTP block
+      - key: RESEND_FROM
+        sync: false # e.g. noreply@yourdomain.com (or onboarding@resend.dev for testing)

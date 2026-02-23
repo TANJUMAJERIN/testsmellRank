@@ -127,9 +127,56 @@ async def send_survey_emails(
 
     Returns: {"sent": N, "failed": M}
     """
+    from app.core.config import settings
+
+    # ── Resend (HTTP API — works on Render free tier) ────────────────
+    if settings.resend_api_key:
+        return await _send_via_resend(contributors, base_url, project_name, settings)
+
+    # ── Fallback: Gmail SMTP (only works outside Render free tier) ───
+    return await _send_via_smtp(contributors, base_url, project_name, settings)
+
+
+async def _send_via_resend(contributors, base_url, project_name, settings):
+    """Send emails through Resend HTTP API (not blocked by Render)."""
+    try:
+        import resend
+        resend.api_key = settings.resend_api_key
+
+        sent = 0
+        failed = 0
+        from_address = f"{settings.mail_from_name} <{settings.resend_from}>"
+
+        for contributor in contributors:
+            survey_url = f"{base_url}/survey/{contributor['token']}"
+            html_body = _build_email_html(
+                name=contributor["name"],
+                project_name=project_name,
+                survey_url=survey_url,
+            )
+            try:
+                resend.Emails.send({
+                    "from": from_address,
+                    "to": [contributor["email"]],
+                    "subject": f"[Test Smell Rank] Developer Survey — {project_name}",
+                    "html": html_body,
+                })
+                sent += 1
+                print(f"[SURVEY] Resend: email sent to {contributor['email']}")
+            except Exception as e:
+                print(f"[SURVEY] Resend: failed to send to {contributor['email']}: {e}")
+                failed += 1
+
+        return {"sent": sent, "failed": failed}
+    except ImportError:
+        print("[SURVEY] resend package not installed")
+        return {"sent": 0, "failed": len(contributors), "skipped": True}
+
+
+async def _send_via_smtp(contributors, base_url, project_name, settings):
+    """Send emails via Gmail SMTP (local dev only — blocked on Render free tier)."""
     try:
         from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-        from app.core.config import settings
 
         if not settings.mail_username or not settings.mail_password:
             print("[SURVEY] Email credentials not configured — skipping send")
@@ -168,9 +215,9 @@ async def send_survey_emails(
                 )
                 await fm.send_message(msg)
                 sent += 1
-                print(f"[SURVEY] Email sent to {contributor['email']}")
+                print(f"[SURVEY] SMTP: email sent to {contributor['email']}")
             except Exception as e:
-                print(f"[SURVEY] Failed to send to {contributor['email']}: {e}")
+                print(f"[SURVEY] SMTP: failed to send to {contributor['email']}: {e}")
                 failed += 1
 
         return {"sent": sent, "failed": failed}
