@@ -6,3 +6,4 @@ def test_conditional_logic():
         assert False
 
 # Fix: Improved condition handling
+#defect bug: Fixed conditional logic
