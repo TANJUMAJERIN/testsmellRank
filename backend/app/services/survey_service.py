@@ -290,17 +290,28 @@ def calculate_quadrant_results(
     git_metrics = (run_smell_analysis or {}).get("git_metrics") or {}
     raw_metrics = git_metrics.get("metrics") or {}
 
-    # Build a PS lookup keyed by abbreviation
+    # Build PS and instance_count lookups keyed by abbreviation
     ps_by_abbr: Dict[str, float] = {}
+    instance_count_by_abbr: Dict[str, int] = {}
+
     for full_name, abbr in SMELL_ABBREVIATIONS.items():
         entry = raw_metrics.get(full_name) or raw_metrics.get(abbr)
         if entry:
             ps_by_abbr[abbr] = float(entry.get("prioritization_score", 0.0))
+            instance_count_by_abbr[abbr] = int(entry.get("instance_count", 0))
         else:
             ps_by_abbr[abbr] = 0.0
+            instance_count_by_abbr[abbr] = 0
 
-    # Only work with smells that have both PS and DDS
-    valid_abbrs = [a for a in SMELL_ORDER if dds.get(a) is not None]
+    # Only include smells that were:
+    #   1. Actually detected in the project (instance_count > 0)
+    #   2. Have a DDS rating from the survey
+    valid_abbrs = [
+        a for a in SMELL_ORDER
+        if dds.get(a) is not None
+        and instance_count_by_abbr.get(a, 0) > 0
+    ]
+
     if not valid_abbrs:
         return []
 
