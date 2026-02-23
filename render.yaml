@@ -2,10 +2,11 @@ services:
   - type: web
     name: testsmellrank-backend
     env: python
+    pythonVersion: "3.11.9" # pin to 3.11 — scipy 1.11.4 has pre-built wheels for this version
     region: oregon # change to your preferred region
     plan: free # or 'starter' for paid
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: MONGODB_URL
