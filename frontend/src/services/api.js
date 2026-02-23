@@ -1,6 +1,9 @@
 import axios from "axios";
 
-const API_URL = "/api";
+// In production (Vercel), set VITE_API_URL to your Render backend URL
+// e.g. https://testsmellrank-backend.onrender.com/api
+// In development, the Vite proxy rewrites /api → http://localhost:8000
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 const api = axios.create({
   baseURL: API_URL,

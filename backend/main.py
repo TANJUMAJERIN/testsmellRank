@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth import router as auth_router
@@ -7,10 +8,20 @@ from app.routes.survey import router as survey_router
 
 app = FastAPI(title="Test Smell Rank API")
 
+# Build allowed origins: always include localhost for development,
+# plus the production Vercel URL from FRONTEND_URL env var.
+_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+_frontend_url = os.getenv("FRONTEND_URL", "").strip()
+if _frontend_url:
+    _origins.append(_frontend_url)
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
