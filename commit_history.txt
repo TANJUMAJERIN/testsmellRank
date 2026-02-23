@@ -1,3 +1,94 @@
+26ab8c2d22f526587222c051319c2e471825e8fb|bug fixed in some test files|2026-02-23 21:57:59 +0600
+
+1	1	tests/test_assertionless.py
+1	1	tests/test_constructor.py
+d7501d4cd1ddef8d5b6622bb2d97959814c05b37|bug|2026-02-23 21:54:01 +0600
+
+1	0	tests/test_assertionless.py
+1	0	tests/test_constructor.py
+6821e708739584c024732e7ea246e71cf7d6c011|bug fixed in lazy test|2026-02-23 21:49:09 +0600
+
+1	0	tests/test_lazy.py
+7d3d0899ede0a6157560a844a10f16d5c85695f9|bug fixed in some test file|2026-02-23 21:48:15 +0600
+
+1	0	tests/test_conditional.py
+1	0	tests/test_exception.py
+9291c7b0a8f4eb77cd1987d2a3278b66a79cd50c|completed|2026-02-23 21:46:05 +0600
+
+0	23	backend/.env.example
+0	133	backend/diagnose_git_metrics.py
+0	132	backend/test_git_metrics.py
+0	25	backend/test_smell_verify.py
+0	150	backend/tests/verification_smells.py
+0	37	test_smell_detection.py
+216c155ba2781178415e0a7d64be1e37268e694e|DDS fixed|2026-02-23 21:38:34 +0600
+
+14	3	backend/app/services/survey_service.py
+1d3330e55dc563f18246a0d9417f462e94197f23|style: Remove hover effect for view button in action buttons|2026-02-23 01:50:02 +0600
+
+0	1	frontend/src/pages/Dashboard.css
+242b206b18c803b0c5635144f6c317c36a596446|style: Add Quick Analysis page and update navigation in Dashboard and ProjectDetail|2026-02-23 01:48:00 +0600
+
+9	0	frontend/src/App.jsx
+111	321	frontend/src/pages/Dashboard.jsx
+1	3	frontend/src/pages/ProjectDetail.jsx
+236	0	frontend/src/pages/QuickAnalysis.jsx
+d6a371bc1516841a5ed27f8a53677cb10fedf8a4|style: Update user name color and enhance various component styles across multiple pages|2026-02-23 01:43:07 +0600
+
+12	11	frontend/src/pages/Compare.css
+33	24	frontend/src/pages/Dashboard.css
+14	9	frontend/src/pages/ProjectDetail.css
+16	14	frontend/src/pages/QuadrantResults.css
+11	11	frontend/src/pages/Results.css
+6	5	frontend/src/pages/Survey.css
+62667c186b8e2723f12052952f1efe9b22a54d4f|style: Update table row styles and adjust file cell background in Results page|2026-02-23 01:28:44 +0600
+
+10	5	frontend/src/pages/Results.css
+6a930ebaed1ce5b7bf4e7682ebbb986e404b8b80|style: Refactor ProjectDetail layout and enhance sidebar navigation|2026-02-23 01:26:33 +0600
+
+5	2	frontend/src/pages/Dashboard.jsx
+47	3	frontend/src/pages/ProjectDetail.css
+199	170	frontend/src/pages/ProjectDetail.jsx
+90218c927f56ced8b9445d02b7cee580c4fe3a76|style: Update navbar styles and add back button to Results page|2026-02-23 01:20:32 +0600
+
+19	12	frontend/src/pages/Compare.css
+19	12	frontend/src/pages/ProjectDetail.css
+15	11	frontend/src/pages/QuadrantResults.css
+61	15	frontend/src/pages/Results.css
+3	1	frontend/src/pages/Results.jsx
+4	3	frontend/src/pages/Survey.css
+f5faff9da93534400b468abc4d5295acf4fc4011|okay|2026-02-23 01:09:45 +0600
+
+1	1	HOW_IT_WORKS.md
+f0735e4a0fbafd147bf7ad79ddc8f909154b15fd|docs: Correct typo in section title for GitHub URL submission|2026-02-22 20:29:22 +0600
+
+1	1	HOW_IT_WORKS.md
+01b68621cb0cc5c93a6bba3b3f7c79365888b72d|docs: Update section title for clarity on GitHub URL submission|2026-02-22 20:27:43 +0600
+
+1	1	HOW_IT_WORKS.md
+f1a3ba427f07fa043492419b474da01ff63c2c30|Add QuadrantResults and Survey pages with corresponding styles|2026-02-22 20:20:36 +0600
+
+23	0	backend/.env.example
+-	-	backend/app/core/__pycache__/config.cpython-312.pyc
+-	-	backend/app/core/__pycache__/database.cpython-312.pyc
+10	0	backend/app/core/config.py
+2	0	backend/app/core/database.py
+356	0	backend/app/routes/survey.py
+355	0	backend/app/services/survey_service.py
+2	0	backend/main.py
+1	0	backend/requirements.txt
+12	0	frontend/src/App.jsx
+322	18	frontend/src/pages/ProjectDetail.jsx
+378	0	frontend/src/pages/QuadrantResults.css
+410	0	frontend/src/pages/QuadrantResults.jsx
+272	0	frontend/src/pages/Survey.css
+232	0	frontend/src/pages/Survey.jsx
+16	1	frontend/src/services/api.js
+ccce131d00526ae115b908897c744fc2092e3baf|can fetch commit history correctly|2026-02-22 16:31:21 +0600
+
+245	0	HOW_IT_WORKS.md
+2	1	backend/app/services/git_metrics.py
+310	0	commit_history.txt
 3872ac0a033fa22d605b4e8fb6e92ae5141f6cfc|get metrics changed|2026-02-20 23:56:53 +0600
 
 430	393	backend/app/services/git_metrics.py
