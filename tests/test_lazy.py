@@ -7,3 +7,4 @@ def test_case2():  # Lazy Test (duplicate logic)
     assert x > 5
 
 # Defect: Fixed lazy evaluation
+#bug: Fixed lazy test case
