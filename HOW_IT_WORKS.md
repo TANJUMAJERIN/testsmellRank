@@ -2,7 +2,7 @@
 
 ---
 
-## Two Ways to Submit a Project
+## Two Ways to Submit a Projecttt
 
 ### Option A — GitHub URL okay thennnn
 
