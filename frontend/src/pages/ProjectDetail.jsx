@@ -169,7 +169,7 @@ const ProjectDetail = () => {
     <div className="pd-container">
       <nav className="navbar">
         <div className="navbar-content">
-          <h1 className="navbar-title">Test Smell Rank</h1>
+          <h1 className="navbar-title">TestSmellRank</h1>
           <div className="navbar-right">
             <span className="user-name">Welcome, {user?.full_name}!</span>
             <button onClick={handleLogout} className="logout-button">
@@ -329,7 +329,7 @@ const ProjectDetail = () => {
                             className="view-btn"
                             onClick={() => handleViewRun(run.id)}
                           >
-                            View Results
+                            View Smell Detection & Rankings
                           </button>
                         )}
                         {run.status === "failed" && (
@@ -359,7 +359,7 @@ const ProjectDetail = () => {
                           >
                             {surveyPanelRunId === run.id
                               ? "Hide Survey"
-                              : "Survey"}
+                              : "Developer Survey & Combined Score"}
                           </button>
                         )}
                       </td>

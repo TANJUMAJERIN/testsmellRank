@@ -127,7 +127,7 @@ const Survey = () => {
   return (
     <div className="survey-page">
       <div className="survey-header">
-        <h1>Test Smell Rank</h1>
+        <h1>TestSmellRank</h1>
         <p>Developer Perception Survey</p>
       </div>
 

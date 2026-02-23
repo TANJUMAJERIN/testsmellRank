@@ -48,7 +48,7 @@ const Register = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Test Smell Rank</h1>
+          <h1>TestSmellRank</h1>
           <p>Create your account</p>
         </div>
 

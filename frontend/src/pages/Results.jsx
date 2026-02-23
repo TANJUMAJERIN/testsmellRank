@@ -93,7 +93,7 @@ const Results = () => {
     <div className="results-container">
       <nav className="navbar">
         <div className="navbar-content">
-          <h1 className="navbar-title">Test Smell Rank</h1>
+          <h1 className="navbar-title">TestSmellRank</h1>
           <div className="navbar-right">
             <span className="user-name">Welcome, {user?.full_name}!</span>
             <button onClick={handleLogout} className="logout-button">
@@ -152,17 +152,6 @@ const Results = () => {
                 </div>
               </div>
 
-              <div className="summary-card card-success">
-                <div className="summary-icon">📊</div>
-                <div className="summary-info">
-                  <h3>
-                    {results.total_files > 0
-                      ? (results.total_smells / results.total_files).toFixed(1)
-                      : 0}
-                  </h3>
-                  <p>Avg Smells per File</p>
-                </div>
-              </div>
             </div>
 
             {/* Smell Type Breakdown */}
@@ -332,7 +321,7 @@ const Results = () => {
             {/* Detailed Results Table */}
             {results.details && results.details.length > 0 ? (
               <div className="smell-details">
-                <h3>Detailed Results by File</h3>
+                <h3>Detailed Smell Detection Results by File</h3>
                 <div className="table-container">
                   <table className="results-table">
                     <thead>

@@ -9,7 +9,7 @@ const Landing = () => {
     <div className="landing-container">
       {/* Header */}
       <header className="landing-header">
-        <h1 className="brand-title">Test Smell Rank</h1>
+        <h1 className="brand-title">TestSmellRank</h1>
         <div className="auth-buttons">
           <button 
             className="btn btn-login"
@@ -29,7 +29,7 @@ const Landing = () => {
       {/* Main Content */}
       <div className="landing-content">
         <div className="hero-section">
-          <h2 className="hero-title">Detect Test Smells in Your Code</h2>
+          <h2 className="hero-title">Detect & Prioritize Test Smells in Your Code</h2>
           <p className="hero-subtitle">
             Analyze and rank test smells in your Python projects with our advanced detection system
           </p>

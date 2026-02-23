@@ -308,6 +308,10 @@ async def compare_runs(
     if not run1_doc or not run2_doc:
         raise HTTPException(status_code=404, detail="One or both runs not found")
 
+    # Always treat the higher run_number as run2 (newer run)
+    if run1_doc.get("run_number", 0) > run2_doc.get("run_number", 0):
+        run1_doc, run2_doc = run2_doc, run1_doc
+
     # Build comparison from git_metrics prioritization scores
     def get_ranked_smells(run_doc: dict) -> dict:
         """Returns {smell_type: {rank, score}} sorted by prioritization_score desc"""
@@ -344,17 +348,24 @@ async def compare_runs(
 
         rank_change = None
         if run1_rank is not None and run2_rank is not None:
-            rank_change = run2_rank - run1_rank  # negative = improved (lower rank = better)
-            if rank_change < 0:
-                improved += 1
-            elif rank_change > 0:
-                worsened += 1
+            rank_change = run2_rank - run1_rank
+            if rank_change > 0:
+                improved += 1   # rank increased = less urgent = improved
+            elif rank_change < 0:
+                worsened += 1   # rank decreased = more urgent = worsened
             else:
                 unchanged += 1
 
         score_change = None
         if run1_score is not None and run2_score is not None:
             score_change = round(run2_score - run1_score, 4)
+
+        if run2_rank is None:
+            status = "removed"
+        elif run1_rank is None:
+            status = "new"
+        else:
+            status = "existing"
 
         comparison.append({
             "smell_type": smell,
@@ -364,6 +375,7 @@ async def compare_runs(
             "run1_score": run1_score,
             "run2_score": run2_score,
             "score_change": score_change,
+            "status": status,
         })
 
     # Sort by run1 rank (smells that existed in run1 first)

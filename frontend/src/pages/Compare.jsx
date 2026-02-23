@@ -168,8 +168,8 @@ const Compare = () => {
                             {row.run2_rank != null ? `#${row.run2_rank}` : <span className="new-tag">new</span>}
                           </td>
                           <td className="change-cell">{renderRankChange(row.rank_change)}</td>
-                          <td className="score-cell">{row.run1_score?.toFixed(4) ?? ""}</td>
-                          <td className="score-cell">{row.run2_score?.toFixed(4) ?? ""}</td>
+                          <td className="cmp-score-cell">{row.run1_score?.toFixed(4) ?? ""}</td>
+                          <td className="cmp-score-cell">{row.run2_score?.toFixed(4) ?? ""}</td>
                           <td className="change-cell">{renderScoreChange(row.score_change)}</td>
                         </tr>
                       );

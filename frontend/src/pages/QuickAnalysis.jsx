@@ -119,7 +119,7 @@ const QuickAnalysis = () => {
       {/* ── Navbar ─────────────────────────────────────────────── */}
       <nav className="navbar">
         <div className="navbar-content">
-          <h1 className="navbar-title">Test Smell Rank</h1>
+          <h1 className="navbar-title">TestSmellRank</h1>
           <div className="navbar-right">
             <span className="user-name">Welcome, {user?.full_name}!</span>
             <button onClick={handleLogout} className="logout-button">
