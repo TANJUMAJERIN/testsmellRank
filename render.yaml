@@ -2,14 +2,14 @@ services:
   - type: web
     name: testsmellrank-backend
     env: python
-    region: oregon          # change to your preferred region
-    plan: free              # or 'starter' for paid
+    region: oregon # change to your preferred region
+    plan: free # or 'starter' for paid
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: MONGODB_URL
-        sync: false         # set manually in Render dashboard
+        sync: false # set manually in Render dashboard
       - key: DATABASE_NAME
         sync: false
       - key: SECRET_KEY
@@ -19,7 +19,7 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "30"
       - key: FRONTEND_URL
-        sync: false         # set to your Vercel URL, e.g. https://testsmellrank.vercel.app
+        sync: false # set to your Vercel URL, e.g. https://testsmellrank.vercel.app
       - key: MAIL_USERNAME
         sync: false
       - key: MAIL_PASSWORD
