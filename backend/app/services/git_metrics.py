@@ -251,12 +251,23 @@ def _build_combined_vectors(
     """
     For every test file compute the four combined metrics (equations 1-4):
 
-    ChgFreq(file)  = Prod_Changes/N + Test_Changes/N
-    ChgExt(file)   = Prod_Churn/N   + Test_Churn/N
-    FaultFreq(file)= Prod_Faulty/N  + Test_Faulty/N
-    FaultExt(file) = Prod_FChurn/N  + Test_FChurn/N
+    ChgFreq(file)  = Prod_Changes/Prod_Total + Test_Changes/Test_Total
+    ChgExt(file)   = Prod_Churn/Prod_Total   + Test_Churn/Test_Total
+    FaultFreq(file)= Prod_Faulty/Prod_Total  + Test_Faulty/Test_Total
+    FaultExt(file) = Prod_FChurn/Prod_Total  + Test_FChurn/Test_Total
+
+    Where:
+      Prod_Total = sum of total_changes across ALL production files in the project
+      Test_Total = sum of total_changes across ALL test files in the project
     """
-    N = total_commits if total_commits > 0 else 1
+    # Separate denominators as specified in the paper (not a single total_commits)
+    prod_total = sum(
+        m['total_changes'] for f, m in file_metrics.items() if is_production_file(f)
+    ) or 1
+    test_total = sum(
+        m['total_changes'] for f, m in file_metrics.items() if is_test_file(f)
+    ) or 1
+
     vectors: Dict[str, Dict[str, float]] = {}
 
     for tf in test_files:
@@ -288,10 +299,10 @@ def _build_combined_vectors(
             prod_f_churn += pm.get('faulty_churn',   0)
 
         vectors[tf] = {
-            'chg_freq':   (prod_changes / N) + (test_changes / N),
-            'chg_ext':    (prod_churn   / N) + (test_churn   / N),
-            'fault_freq': (prod_faulty  / N) + (test_faulty  / N),
-            'fault_ext':  (prod_f_churn / N) + (test_f_churn / N),
+            'chg_freq':   (prod_changes / prod_total) + (test_changes / test_total),
+            'chg_ext':    (prod_churn   / prod_total) + (test_churn   / test_total),
+            'fault_freq': (prod_faulty  / prod_total) + (test_faulty  / test_total),
+            'fault_ext':  (prod_f_churn / prod_total) + (test_f_churn / test_total),
         }
 
     return vectors

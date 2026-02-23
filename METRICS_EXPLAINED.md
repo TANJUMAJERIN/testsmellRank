@@ -487,22 +487,23 @@ This broad recall is intentional to avoid missing informal commit messages.
 
 ## 10. Complete Formula Summary
 
-| Formula          | Expression                                     | What it measures                        |
-| ---------------- | ---------------------------------------------- | --------------------------------------- |
-| **ChgFreq(f)**   | (Prod_Changes + Test_Changes) / N              | How frequently the file pair is changed |
-| **ChgExt(f)**    | (Prod_Churn + Test_Churn) / N                  | Volume of code change per commit        |
-| **FaultFreq(f)** | (Prod_FaultyChanges + Test_FaultyChanges) / N  | Frequency of fault-related changes      |
-| **FaultExt(f)**  | (Prod_FaultyChurn + Test_FaultyChurn) / N      | Volume of fault-related code churn      |
-| **CP(S)**        | ρ(presence, ChgFreq) + ρ(presence, ChgExt)     | Change Proneness of smell S             |
-| **FP(S)**        | ρ(presence, FaultFreq) + ρ(presence, FaultExt) | Fault Proneness of smell S              |
-| **PS(S)**        | (CP(S) + FP(S)) / 2                            | Final Prioritization Score              |
+| Formula          | Expression                                                            | What it measures                        |
+| ---------------- | --------------------------------------------------------------------- | --------------------------------------- |
+| **ChgFreq(f)**   | (Prod_Changes / Prod_Total) + (Test_Changes / Test_Total)             | How frequently the file pair is changed |
+| **ChgExt(f)**    | (Prod_Churn / Prod_Total) + (Test_Churn / Test_Total)                 | Volume of code change                   |
+| **FaultFreq(f)** | (Prod_FaultyChanges / Prod_Total) + (Test_FaultyChanges / Test_Total) | Frequency of fault-related changes      |
+| **FaultExt(f)**  | (Prod_FaultyChurn / Prod_Total) + (Test_FaultyChurn / Test_Total)     | Volume of fault-related code churn      |
+| **CP(S)**        | ρ(presence, ChgFreq) + ρ(presence, ChgExt)                            | Change Proneness of smell S             |
+| **FP(S)**        | ρ(presence, FaultFreq) + ρ(presence, FaultExt)                        | Fault Proneness of smell S              |
+| **PS(S)**        | (CP(S) + FP(S)) / 2                                                   | Final Prioritization Score              |
 
 Where:
 
-- `N` = total number of non-merge commits in the repository
+- `Prod_Total` = sum of `total_changes` across **all production files** in the project
+- `Test_Total` = sum of `total_changes` across **all test files** in the project
 - `ρ` = Spearman rank correlation coefficient (range −1 to +1)
 - `presence` = binary vector (1.0/0.0) indicating which test files contain smell S
-- `Prod_*` = summed values across all production files that co-changed with the test file
+- `Prod_*` per file = summed values across all production files that co-changed with that test file
 
 ---
 
