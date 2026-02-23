@@ -8,15 +8,23 @@ from app.routes.survey import router as survey_router
 
 app = FastAPI(title="Test Smell Rank API")
 
-# Build allowed origins: always include localhost for development,
-# plus the production Vercel URL from FRONTEND_URL env var.
-_origins = [
+# Build allowed origins list.
+# ALLOWED_ORIGINS  — comma-separated list (takes priority, most flexible)
+# FRONTEND_URL     — single production URL (legacy / fallback)
+_default_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
 ]
-_frontend_url = os.getenv("FRONTEND_URL", "").strip()
-if _frontend_url:
-    _origins.append(_frontend_url)
+
+_extra = os.getenv("ALLOWED_ORIGINS", "")
+if _extra.strip():
+    _extra_list = [o.strip().rstrip("/") for o in _extra.split(",") if o.strip()]
+else:
+    # fall back to single FRONTEND_URL
+    _frontend_url = os.getenv("FRONTEND_URL", "").strip().rstrip("/")
+    _extra_list = [_frontend_url] if _frontend_url else []
+
+_origins = _default_origins + _extra_list
 
 # Configure CORS
 app.add_middleware(
