@@ -21,6 +21,7 @@ Where rho is Spearman rank correlation coefficient, computed across all
 test files in the repository (one data point per file).
 """
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -57,13 +58,33 @@ def extract_git_history(repo_path: Path) -> List[Dict]:
         'is_faulty':     bool,
         'files_changed': { filename: {'additions': int, 'deletions': int} }
     }
+
+    IMPORTANT: We explicitly require a .git directory to exist DIRECTLY inside
+    repo_path before running any git commands.  Without this guard, git's normal
+    upward directory traversal would find the parent application's .git folder
+    (e.g. testsmellRank/.git) and return its history — which is completely wrong.
     """
     commits = []
+
+    # ── Hard guard: .git must exist directly inside repo_path ───────────────
+    # git normally walks UP the tree to find .git, so without this check a
+    # ZIP project without its own .git would silently pick up the host app's
+    # git history.  We prevent that here AND via GIT_CEILING_DIRECTORIES below.
+    if not (repo_path / '.git').is_dir():
+        print(f"[GIT] No .git directory found directly in {repo_path} — skipping git analysis")
+        return []
+
+    # Env var that tells git: never look above repo_path for a .git folder
+    _git_env = {
+        **os.environ,
+        'GIT_CEILING_DIRECTORIES': str(repo_path.parent),
+    }
 
     try:
         check = subprocess.run(
             ['git', 'rev-parse', '--git-dir'],
-            cwd=repo_path, capture_output=True, text=True, timeout=10
+            cwd=repo_path, capture_output=True, text=True, timeout=10,
+            env=_git_env,
         )
         if check.returncode != 0:
             print(f"[ERROR] Not a git repository: {repo_path}")
@@ -71,7 +92,8 @@ def extract_git_history(repo_path: Path) -> List[Dict]:
 
         result = subprocess.run(
             ['git', 'log', '--numstat', '--format=%H|%s|%ai', '--no-merges'],
-            cwd=repo_path, capture_output=True, text=True, timeout=120
+            cwd=repo_path, capture_output=True, text=True, timeout=120,
+            env=_git_env,
         )
         if result.returncode != 0:
             print(f"[ERROR] git log failed: {result.stderr}")
@@ -260,13 +282,8 @@ def _build_combined_vectors(
       Prod_Total = sum of total_changes across ALL production files in the project
       Test_Total = sum of total_changes across ALL test files in the project
     """
-    # Separate denominators as specified in the paper (not a single total_commits)
-    prod_total = sum(
-        m['total_changes'] for f, m in file_metrics.items() if is_production_file(f)
-    ) or 1
-    test_total = sum(
-        m['total_changes'] for f, m in file_metrics.items() if is_test_file(f)
-    ) or 1
+    prod_total = total_commits or 1
+    test_total = total_commits or 1
 
     vectors: Dict[str, Dict[str, float]] = {}
 
@@ -470,7 +487,20 @@ def analyze_project_with_git(
 
     commits = extract_git_history(project_path)
     if not commits:
-        return {'error': 'No git history found or not a git repository.', 'metrics': {}}
+        # Distinguish: does a .git directory exist at all?
+        has_git_dir = (project_path / '.git').exists()
+        if has_git_dir:
+            error_msg = (
+                "The project includes a .git directory but no commit history was found. "
+                "Please ensure the repository has at least one commit to enable smell prioritization."
+            )
+        else:
+            error_msg = (
+                "The project does not include git history to prioritize the smells. "
+                "Upload a project that contains a .git folder (with commit history) "
+                "to enable CP, FP, and PS prioritization scores."
+            )
+        return {'error': error_msg, 'metrics': {}}
 
     total_commits  = len(commits)
     faulty_commits = [c for c in commits if c['is_faulty']]

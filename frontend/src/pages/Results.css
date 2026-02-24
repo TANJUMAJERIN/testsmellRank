@@ -47,7 +47,9 @@
   cursor: pointer;
   transition: opacity 0.2s;
 }
-.logout-button:hover { opacity: 0.88; }
+.logout-button:hover {
+  opacity: 0.88;
+}
 
 .results-content {
   max-width: 1200px;
@@ -179,7 +181,9 @@
   border-radius: 16px;
   color: white;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .summary-card:hover {
@@ -249,7 +253,9 @@
   padding: 1.25rem;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .smell-type-card:hover {
@@ -716,6 +722,29 @@
   font-style: italic;
   color: #888;
   font-size: 0.9rem;
+}
+
+.git-metrics-info {
+  margin-bottom: 2.5rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #2196f3;
+}
+
+.git-metrics-info h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #0d47a1;
+  font-weight: 700;
+}
+
+.git-metrics-info p {
+  color: #555;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
 }
 
 @media (max-width: 768px) {

@@ -312,9 +312,16 @@ const Results = () => {
                 <h3>⚠️ Git Metrics Not Available</h3>
                 <p>{results.git_metrics.error}</p>
                 <p className="error-hint">
-                  To enable prioritization metrics, ensure your project is a Git
-                  repository with commit history.
+                  To enable prioritization metrics, upload a project that includes
+                  a <code>.git</code> folder with commit history, or use a GitHub URL.
                 </p>
+              </div>
+            )}
+
+            {results.git_metrics && !results.git_metrics.error && results.git_metrics.note && (
+              <div className="git-metrics-info">
+                <h3>ℹ️ Git Metrics Status</h3>
+                <p>{results.git_metrics.note}</p>
               </div>
             )}
 

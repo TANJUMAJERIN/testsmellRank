@@ -79,12 +79,36 @@ def detect_smells_for_project(
 
     # Git-based metrics (CP / FP / PS)
     git_analysis = None
-    if include_git_metrics and all_smell_instances:
-        try:
-            git_analysis = analyze_project_with_git(project_path, all_smell_instances, cp_weight)
-        except Exception as exc:
-            print(f"Git metrics calculation failed: {exc}")
-            git_analysis = {"error": str(exc)}
+    if include_git_metrics:
+        if all_smell_instances:
+            try:
+                git_analysis = analyze_project_with_git(project_path, all_smell_instances, cp_weight)
+            except Exception as exc:
+                print(f"Git metrics calculation failed: {exc}")
+                git_analysis = {
+                    "error": (
+                        "Git metrics could not be computed. "
+                        f"Reason: {exc}"
+                    ),
+                    "metrics": {},
+                }
+        else:
+            # No smells detected — check whether a git repo even exists so
+            # the caller can still report a useful status to the user.
+            has_git = (project_path / '.git').exists()
+            git_analysis = {
+                "error": None,
+                "metrics": {},
+                "statistics": None,
+                "note": (
+                    "No test smells were detected, so git-based prioritization "
+                    "was not performed."
+                    if has_git else
+                    "The project does not include git history to prioritize the smells. "
+                    "Upload a project that contains a .git folder (with commit history) "
+                    "to enable CP, FP, and PS prioritization scores."
+                ),
+            }
 
     return {
         "total_files":   len(test_files),
