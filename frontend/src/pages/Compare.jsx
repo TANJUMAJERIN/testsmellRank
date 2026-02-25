@@ -55,10 +55,10 @@ const Compare = () => {
   const renderRankChange = (change) => {
     if (change === null || change === undefined)
       return <span className="rank-neutral"></span>;
-    if (change < 0)
-      return <span className="rank-improved"> {Math.abs(change)} improved</span>;
     if (change > 0)
-      return <span className="rank-worsened"> {change} worsened</span>;
+      return <span className="rank-improved"> {change} improved</span>;
+    if (change < 0)
+      return <span className="rank-worsened"> {Math.abs(change)} worsened</span>;
     return <span className="rank-neutral"> unchanged</span>;
   };
 
@@ -153,19 +153,19 @@ const Compare = () => {
                   <tbody>
                     {comparison.comparison.map((row, i) => {
                       const rowClass =
-                        row.rank_change < 0
+                        row.rank_change > 0
                           ? "row-improved"
-                          : row.rank_change > 0
+                          : row.rank_change < 0
                           ? "row-worsened"
                           : "";
                       return (
                         <tr key={i} className={rowClass}>
                           <td className="smell-name-cell">{row.smell_type}</td>
                           <td className="rank-cell">
-                            {row.run1_rank != null ? `#${row.run1_rank}` : <span className="new-tag">new</span>}
+                            {row.run1_rank != null ? `#${row.run1_rank}` : <span className="new-tag">not present(refactored)</span>}
                           </td>
                           <td className="rank-cell">
-                            {row.run2_rank != null ? `#${row.run2_rank}` : <span className="new-tag">new</span>}
+                            {row.run2_rank != null ? `#${row.run2_rank}` : <span className="new-tag">not present(refactored)</span>}
                           </td>
                           <td className="change-cell">{renderRankChange(row.rank_change)}</td>
                           <td className="cmp-score-cell">{row.run1_score?.toFixed(4) ?? ""}</td>
