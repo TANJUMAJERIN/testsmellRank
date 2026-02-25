@@ -1,0 +1,741 @@
+================================================================================
+             BACKEND COMPLETE WORKING GUIDE — TestSmellRank
+================================================================================
+Framework    : FastAPI (Python)
+Runtime      : Python 3.11+
+Database     : MongoDB (via Motor — async driver)
+Auth         : JWT (JSON Web Tokens) using python-jose + passlib/bcrypt
+Config       : pydantic-settings (reads .env file)
+Email        : fastapi-mail over Gmail SMTP (port 587 / STARTTLS)
+Scientific   : numpy + scipy (Spearman correlation for smell ranking)
+Git ops      : subprocess calls to system git binary
+Entry point  : uvicorn main:app  (host 0.0.0.0, port 8000)
+
+================================================================================
+DIRECTORY LAYOUT
+================================================================================
+
+backend/
+├── main.py                          ← App factory, CORS, router registration
+├── .env                             ← Secrets (never commit)
+├── requirements.txt
+└── app/
+    ├── core/
+    │   ├── config.py                ← All settings from .env
+    │   ├── database.py              ← MongoDB collections
+    │   └── security.py              ← JWT + bcrypt + auth dependency
+    ├── models/
+    │   ├── user.py                  ← Pydantic request/response models for users
+    │   └── project.py               ← Pydantic models for projects/runs/compare
+    ├── routes/
+    │   ├── auth.py                  ← POST /register, POST /login, GET /me
+    │   ├── upload.py                ← POST /upload/zip, POST /upload/github
+    │   ├── projects.py              ← CRUD for projects + runs + compare
+    │   └── survey.py                ← Survey start, status, public form, submit
+    └── services/
+        ├── smell_detection.py       ← AST-based detection of 15 test smells
+        ├── git_metrics.py           ← Git history → CP/FP/PS prioritization scores
+        └── survey_service.py        ← Contributors, email, DDS, quadrant logic
+
+================================================================================
+1. ENTRY POINT — main.py
+================================================================================
+Tech: FastAPI, CORSMiddleware
+
+What it does:
+  creates the FastAPI app instance.
+  Adds CORS middleware allowing requests from:
+    http://localhost:5173  (Vite frontend dev server)
+    http://localhost:3000  (alternative dev port)
+  Registers 4 routers:
+    auth_router     → prefix /api/auth
+    upload_router   → prefix /api/upload
+    projects_router → prefix /api/projects
+    survey_router   → no extra prefix (routes spelled out fully in survey.py)
+  Exposes GET / health check → {"message": "Test Smell Rank API is running"}
+  When run directly: uvicorn on 0.0.0.0:8000
+
+================================================================================
+2. CORE — app/core/
+================================================================================
+
+── config.py ────────────────────────────────────────────────────────────────
+Tech: pydantic-settings (BaseSettings)
+
+Reads these variables from .env:
+  MONGODB_URL                — MongoDB connection string
+  DATABASE_NAME              — MongoDB database name
+  SECRET_KEY                 — Random secret for JWT signing
+  ALGORITHM                  — JWT algorithm (default: HS256)
+  ACCESS_TOKEN_EXPIRE_MINUTES— Token lifetime (default: 30 min)
+  MAIL_USERNAME              — Gmail address for sending emails
+  MAIL_PASSWORD              — Gmail App Password
+  MAIL_FROM                  — Sender address (optional, defaults to username)
+  MAIL_FROM_NAME             — Display name (default: "Test Smell Rank")
+  FRONTEND_URL               — Base URL for survey links (default: http://localhost:5173)
+
+All settings accessible as:  from app.core.config import settings
+
+── database.py ──────────────────────────────────────────────────────────────
+Tech: motor (async MongoDB driver), AsyncIOMotorClient
+
+Creates ONE client connecting to settings.mongodb_url.
+Exposes 5 collection handles (used directly in routes/services):
+  users_collection           → stores user accounts
+  projects_collection        → stores project documents
+  runs_collection            → stores each analysis run with results
+  surveys_collection         → stores one survey per run (contributors + DDS)
+  survey_responses_collection→ stores individual developer submissions
+
+No ORM, no schema migration — raw MongoDB documents (dicts).
+
+── security.py ──────────────────────────────────────────────────────────────
+Tech: python-jose (JWT), passlib (bcrypt), FastAPI Depends
+
+Functions:
+  verify_password(plain, hashed) → bool
+    Uses bcrypt to check submitted password against stored hash.
+
+  get_password_hash(password) → str
+    Bcrypt-hashes a plain-text password for storage.
+
+  create_access_token(data, expires_delta) → str
+    Creates HS256 JWT with "sub" = user email and "exp" claim.
+    Default expiry: 15 minutes (overridden per settings in auth route).
+
+  get_current_user(token) → dict   [FastAPI dependency]
+    Called via Depends(get_current_user) on every protected endpoint.
+    Reads Bearer token from Authorization header.
+    Decodes JWT → extracts email → queries users_collection.
+    Returns the raw MongoDB user document.
+    Raises HTTP 401 if any step fails.
+
+OAuth2PasswordBearer points to tokenUrl="api/auth/login" so Swagger UI
+knows how to get a token.
+
+================================================================================
+3. MODELS — app/models/
+================================================================================
+
+── user.py ──────────────────────────────────────────────────────────────────
+Tech: Pydantic v2 BaseModel
+
+  UserRegister    — {email: EmailStr, password: str(min 6), full_name: str}
+                    Used as request body for POST /register.
+  UserLogin       — {email: EmailStr, password: str}
+                    Used as request body for POST /login.
+  UserResponse    — {id, email, full_name, created_at}
+                    Returned from /register and /me.
+  Token           — {access_token: str, token_type: str}
+                    Returned from /login.
+  TokenData       — {email: Optional[str]}
+                    Internal type used inside JWT decode logic.
+
+── project.py ───────────────────────────────────────────────────────────────
+Tech: Pydantic v2 BaseModel
+
+  ProjectCreate     — {name(1-100 chars), repo_url, cp_weight(0-1, default 0.5)}
+                      Request body for POST /projects/.
+  ProjectResponse   — {id, user_id, name, repo_url, created_at, run_count}
+  RunSummary        — {total_files, total_smells}
+  RunResponse       — {id, project_id, run_number, created_at, status,
+                        summary, smell_analysis, error}
+  CompareSmellEntry — {smell_type, run1_rank, run2_rank, rank_change,
+                        run1_score, run2_score, score_change}
+  CompareResponse   — {project_id, run1, run2, comparison[], summary}
+
+Note: MongoDB stores _id (ObjectId). Routes convert _id → str for JSON.
+
+================================================================================
+4. ROUTES — app/routes/
+================================================================================
+
+── auth.py  (prefix: /api/auth) ─────────────────────────────────────────────
+Tech: FastAPI APIRouter, bcrypt, JWT
+
+  POST /api/auth/register
+    Input : UserRegister body
+    Logic : checks duplicate email → hashes password → inserts to users_collection
+    Output: UserResponse (HTTP 201)
+
+  POST /api/auth/login
+    Input : UserLogin body (email + password — NOT OAuth2 form, plain JSON)
+    Logic : finds user → verify_password → create_access_token(sub=email)
+    Output: Token {access_token, token_type:"bearer"}
+    Note  : Token expiry = settings.access_token_expire_minutes (30 min default)
+
+  GET /api/auth/me
+    Auth  : Bearer token required (Depends(get_current_user))
+    Logic : get_current_user decodes JWT → returns user doc
+    Output: UserResponse
+
+── upload.py  (prefix: /api/upload) ─────────────────────────────────────────
+Tech: FastAPI, subprocess (git clone), zipfile, shutil, pathlib
+
+Both endpoints are for QUICK ANALYSIS — no DB write, one-time results.
+
+  POST /api/upload/github
+    Auth  : Bearer token
+    Input : {repo_url: str, cp_weight: float}
+    Logic :
+      1. Validates GitHub URL starts with https://github.com/ etc.
+      2. Determines user storage path: uploaded_projects/user_<id>/<repo_name>/
+      3. If path exists, removes it first with shutil.rmtree (handles Windows read-only files).
+      4. Runs: git clone <repo_url> <project_dir>  (timeout 300s)
+      5. Calls detect_smells_for_project(project_dir, cp_weight)
+    Output: {message, project_path, cp_weight, smell_analysis}
+
+  POST /api/upload/zip
+    Auth  : Bearer token
+    Input : multipart form — file (ZIP), cp_weight (float field)
+    Logic :
+      1. Validates .zip extension.
+      2. Saves ZIP to user folder, extracts with zipfile.ZipFile.
+      3. Deletes the saved .zip after extraction.
+      4. _find_project_root() finds actual project inside ZIP:
+           - If .git exists directly → use that dir
+           - else search subdirs for .git (handles wrapped ZIP from GitHub)
+           - else unwrap single top-level folder
+      5. Calls detect_smells_for_project(project_root, cp_weight)
+    Output: {message, project_path, cp_weight, smell_analysis}
+
+  Helper: _force_remove(func, path, excinfo)
+    Windows-only issue: git creates read-only files. This error handler
+    chmod's the file to writable before retrying shutil.rmtree deletion.
+
+── projects.py  (prefix: /api/projects) ─────────────────────────────────────
+Tech: FastAPI, Motor, bson.ObjectId, subprocess, pathlib
+
+ALL endpoints require Bearer token.  All user data is scoped to current user.
+
+  POST /api/projects/
+    Input : ProjectCreate {name, repo_url, cp_weight}
+    Logic : Validates GitHub URL → inserts doc to projects_collection
+    Output: _project_to_dict(doc) with run_count=0
+
+  GET /api/projects/
+    Logic : finds all projects where user_id = current user's _id
+            For each project: count runs from runs_collection
+    Output: list of project dicts sorted by created_at desc
+
+  DELETE /api/projects/{project_id}
+    Logic : deletes ALL runs for that project → deletes project doc
+    Output: {"message": "Project deleted"}
+
+  POST /api/projects/{project_id}/runs
+    Logic (the big one):
+      1. Verify project belongs to user.
+      2. Count existing runs → run_number = count + 1
+      3. Insert run doc with status="pending" immediately.
+      4. git clone repo_url → uploaded_projects/user_<id>/<repo_name>/
+         (re-clones fresh every time, deletes old dir first)
+      5. detect_smells_for_project(project_dir, cp_weight) → smell_result
+      6. Update run doc: status="completed", smell_analysis=smell_result,
+         summary={total_files, total_smells}
+      7. If any exception: update run doc with status="failed", error=message
+    Output: RunResponse with full smell_analysis included
+
+  GET /api/projects/{project_id}/runs
+    Logic : lists runs for project, EXCLUDES smell_analysis field
+            (too large for listing — fetch individually when needed)
+    Output: list of run dicts sorted by run_number desc
+
+  GET /api/projects/{project_id}/runs/{run_id}
+    Logic : fetches single run WITH full smell_analysis included
+    Output: full RunResponse
+
+  DELETE /api/projects/{project_id}/runs/{run_id}
+    Logic : verifies ownership → deletes run from runs_collection
+    Output: {"message": "Run deleted"}
+
+  GET /api/projects/{project_id}/compare?run1=X&run2=Y
+    Logic :
+      1. Fetch both run docs.
+      2. Order so lower run_number = run1 (older), higher = run2 (newer).
+      3. For each run, extract git_metrics → sort smells by prioritization_score
+         → build {smell_type: {rank, score}} ranking dict.
+      4. Union all smell types from both runs.
+      5. For each smell: compute rank_change = run2_rank - run1_rank
+         (positive = rank increased = less urgent = improved)
+         compute score_change = run2_score - run1_score
+      6. Count improved / worsened / unchanged.
+    Output: {project_id, run1, run2, comparison[], summary}
+
+── survey.py  (no additional prefix — routes spelled out fully) ──────────────
+Tech: FastAPI, Motor, uuid, fastapi-mail, Pydantic
+
+  PROTECTED ENDPOINTS:
+
+  POST /api/projects/{project_id}/runs/{run_id}/survey/start
+    Logic :
+      1. _get_project_and_run() — verify ownership, run must be "completed".
+      2. Find cloned repo path: uploaded_projects/user_<id>/<repo_name>/
+      3. extract_contributors(repo_path) — runs `git log --format=%an|%ae`
+         to get all unique human contributor (name, email) pairs.
+      4. Check if survey already exists for this run (idempotent re-send):
+         - If yes: re-use existing tokens for contributors already in list,
+                   assign new uuid token for any new contributors.
+         - If no: create survey doc with {project_id, run_id, project_name,
+                  contributors:[{name, email, token:uuid4, submitted:false}],
+                  dds:null, quadrant_results:null}
+      5. send_survey_emails() — sends personalised HTML email to each
+         contributor with link: <FRONTEND_URL>/survey/<token>
+      6. Return survey summary with email_dispatch counts.
+
+  GET /api/projects/{project_id}/runs/{run_id}/survey
+    Logic : find survey doc by project_id + run_id.
+            If none → return {exists: False}
+            Else → return _survey_to_dict() which includes:
+              contributors list (without tokens), submitted_count,
+              dds (null until first submission), quadrant_results
+    Used by: ProjectDetail.jsx (survey panel) and QuadrantResults.jsx
+
+  PUBLIC ENDPOINTS (no auth):
+
+  GET /api/survey/{token}
+    Logic :
+      1. Finds survey doc where contributors.token matches.
+      2. Finds the specific contributor with that token.
+      3. If already submitted → return {already_submitted: True, project_name}
+      4. Else → return {project_name, contributor_name, smells: [15 smell dicts]}
+                 Each smell: {abbreviation, name, description}
+    Used by: Survey.jsx page (the link sent via email)
+
+  POST /api/survey/{token}/submit
+    Input : {ratings: {"CTL": 3, "AR": 5, "DA": 2, ...}}  (must rate all 15)
+    Logic :
+      1. Validate: token valid, not already submitted.
+      2. Validate all 15 smell abbreviations have ratings 1–5.
+      3. Insert survey_responses doc: {survey_id, ratings, submitted_at, ...}
+      4. Mark contributor.submitted = True in survey doc.
+      5. Fetch ALL responses for this survey from survey_responses_collection.
+      6. calculate_dds(all_responses) → rolling average per smell.
+      7. Fetch the run doc → calculate_quadrant_results(smell_analysis, dds)
+      8. Update surveys_collection: set dds + quadrant_results.
+    Output: {success, message, responses_so_far}
+
+================================================================================
+5. SERVICES — app/services/
+================================================================================
+
+── smell_detection.py ───────────────────────────────────────────────────────
+Tech: Python ast module (Abstract Syntax Tree), pathlib
+
+This file implements a CUSTOM AST parser — no external smell detection library.
+Based on the ICSME 2025 paper defining exactly 15 test smell types.
+
+  MAIN ENTRY: detect_smells_for_project(project_path, cp_weight)
+    1. Finds test files: test_*.py and *_test.py recursively.
+    2. Calls detect_all_smells(file) per file → list of smell dicts.
+    3. Calls analyze_project_with_git(project_path, all_smell_instances, cp_weight)
+       to compute CP/FP/PS scores (only if .git exists).
+    Returns: {total_files, total_smells, details[], git_metrics}
+
+  detect_all_smells(test_file)
+    Parses file with ast.parse() → walks the AST tree.
+    Dispatches to two sub-analyzers:
+      _analyze_class_smells(class_node)   — 4 class-level smells
+      _analyze_function_smells(func_node) — 11 function-level smells
+    Returns flat list of {type, line, message} dicts.
+
+  ── CLASS-LEVEL SMELLS (4 smells) ──────────────────────────────────────────
+
+  CI — Constructor Initialization
+    Detected: test class has an __init__ method
+    Problem : should use setUp() instead
+
+  GF — General Fixture
+    Detected: setUp()/setup()/setup_method()/setUpClass() has > 5 assignments
+    Problem : initialises more than any single test needs
+
+  TM — Test Maverick
+    Detected: class has only 1 test method (starts with test_)
+    Problem : isolated, non-cohesive class
+
+  LCTC — Lack of Cohesion of Test Cases
+    Detected: multiple test methods with zero shared self.* attributes
+    Problem : unrelated test concerns bundled in one class
+
+  ── FUNCTION-LEVEL SMELLS (11 smells) ───────────────────────────────────────
+  Only analyzed on functions whose name starts with test_
+
+  ET — Empty Test
+    Detected: body is empty, only 'pass', or only a docstring
+    Returns early (no further checks needed)
+
+  AR — Assertion Roulette
+    Detected: > 3 assertions AND > 3 have no failure message
+    Problem : cannot identify which assertion fails
+
+  RA — Redundant Assertion
+    Detected: assert True  or  assert X == X  (literal tautologies)
+    Problem : always passes, zero verification value
+
+  SA — Suboptimal Assert
+    Detected: assert (x == True) or (x == False) patterns
+    Problem : should use assertTrue()/assertFalse()
+
+  DA — Duplicate Assert
+    Detected: same ast.unparse(assertion) seen twice in same function
+    Problem : repeated assertion adds no information
+
+  MNT — Magic Number Test
+    Detected: numeric literal in assertion comparator (not 0, 1, -1)
+    Problem : unexplained magic number makes intent unclear
+
+  OS — Obscure In-Line Setup
+    Detected: ≥ 3 variable assignments OR ≥ 2 constructor calls BEFORE
+              the first assertion in the test body
+    Problem : setup code obscures what's actually being tested
+
+  CTL — Conditional Test Logic
+    Detected: ast.If  or  ast.For / ast.While inside test function
+    Problem : creates multiple execution paths, weakens test determinism
+
+  EH — Exception Handling
+    Detected: ast.Try with generic except (None type or Exception class)
+    Problem : should use self.assertRaises() context manager
+
+  ST — Sleepy Test
+    Detected: any call with attribute name == 'sleep' (e.g. time.sleep())
+    Problem : makes tests slow and non-deterministic across machines
+
+  RP — Redundant Print
+    Detected: any ast.Call where func.id == 'print'
+    Problem : print statements add noise without aiding assertions
+
+── git_metrics.py ───────────────────────────────────────────────────────────
+Tech: subprocess (git), numpy, scipy.stats.spearmanr, collections.defaultdict
+
+Implements the exact methodology from the ICSME 2025 paper.
+7 clearly labelled pipeline steps:
+
+  STEP 1 — extract_git_history(repo_path)
+    Runs: git log --numstat --format=%H|%s|%ai --no-merges
+    Safety guard: requires .git to exist DIRECTLY in repo_path
+                  (prevents accidental use of parent app's .git).
+    Sets GIT_CEILING_DIRECTORIES env var for extra safety.
+    Parses output line by line into commit dicts:
+      { hash, message, timestamp, is_faulty, files_changed: {file: {add,del}} }
+    is_faulty: True if commit message contains bug/fix/error/defect/etc.
+
+  STEP 2 — is_test_file(filename) / is_production_file(filename)
+    Classifies each file from git history as test or production.
+    Test file criteria: /test_  _test.  /tests/  starts with test_
+    Production file: .py, not test file, not __init__.py / setup.py
+
+  STEP 3 — _build_file_metrics(commits)
+    Aggregates per file: total_changes, total_churn (add+del),
+    faulty_changes, faulty_churn from full commit history.
+
+  STEP 4 — _build_cochange_map(test_files, commits)
+    For each test file: finds all production files committed in the same
+    commit (co-change pairs). Used in combined metric computation.
+
+  STEP 5 — _build_combined_vectors(test_files, file_metrics, cochange_map, total_commits)
+    Implements paper equations 1-4 per test file:
+      ChgFreq  = Prod_Changes/Total  + Test_Changes/Total
+      ChgExt   = Prod_Churn/Total    + Test_Churn/Total
+      FaultFreq= Prod_Faulty/Total   + Test_Faulty/Total
+      FaultExt = Prod_FChurn/Total   + Test_FChurn/Total
+    The "Prod_*" values sum the co-changed production files' metrics.
+
+  STEP 6 — calculate_spearman_metrics(smell_instances, vectors, test_files, cp_weight)
+    For each smell type:
+      1. Build presence vector: 1.0 if test file has this smell, else 0.0
+      2. Spearman rho between presence and each of 4 metric columns:
+           rho_cf = rho(presence, ChgFreq)
+           rho_ce = rho(presence, ChgExt)
+           rho_ff = rho(presence, FaultFreq)
+           rho_fe = rho(presence, FaultExt)
+      3. CP(smell) = rho_cf + rho_ce
+         FP(smell) = rho_ff + rho_fe
+         PS(smell) = cp_weight * CP + (1 - cp_weight) * FP
+            default cp_weight=0.5 → PS = (CP + FP) / 2
+    Returns dict: {smell_type: {cp_score, fp_score, prioritization_score,
+                                instance_count, affected_test_files, ...}}
+
+  STEP 7 — rank_smells(metrics)
+    Sorts by prioritization_score descending — assigns data_rank 1, 2, 3...
+
+  MAIN: analyze_project_with_git(project_path, smell_instances, cp_weight)
+    Runs steps 1-7 in order.
+    Returns: {ranked_smells, metrics, statistics}
+    statistics includes: total_commits, faulty_commits, fault_commit_pct,
+                          total_test_files, total_prod_files,
+                          smell_types_analyzed, total_smell_instances,
+                          cp_weight, fp_weight
+
+  SMELL_ABBREVIATIONS dict (15 entries):
+    Maps full smell name → abbreviation (CTL, AR, DA, MNT, OS, RA, EH, CI,
+    SA, TM, RP, GF, ST, ET, LCTC). Used by survey_service to align names.
+
+  _spearman(x, y):
+    Returns (0.0, 1.0) if either array has zero variance or < 3 data points.
+    Otherwise calls scipy.stats.spearmanr.
+
+  paths_match(smell_path, git_path):
+    Flexible path matcher — handles different root prefixes between smell
+    detector (relative to project root) and git history (relative to repo root).
+    Checks exact match, endsWith, or same filename if it starts with 'test'.
+
+── survey_service.py ────────────────────────────────────────────────────────
+Tech: subprocess (git), fastapi-mail, collections.defaultdict
+
+4 clearly labelled parts:
+
+  PART 1 — extract_contributors(repo_path)
+    Runs: git log --format=%an|%ae --no-merges
+    Deduplicates by email (case-insensitive).
+    Filters out bot/noreply addresses:
+      noreply, no-reply, github-actions, dependabot, bot@, bot+,
+      actions@, notifications@, users.noreply
+    Returns: [{"name": str, "email": str}, ...]
+
+  PART 2 — send_survey_emails(contributors, survey_id, project_name, base_url)
+    Uses fastapi-mail with Gmail SMTP (port 587, STARTTLS).
+    Each email is personalised:
+      Subject: [Test Smell Rank] Developer Survey — <project_name>
+      Body   : HTML with the contributor's name, project, and a unique link
+               <base_url>/survey/<token>
+    If mail_username/mail_password not in settings → skips sending, logs it.
+    Returns: {"sent": N, "failed": M}
+
+  PART 3 — calculate_dds(responses)
+    Receives list of response docs (each has "ratings": {"CTL": 3, "AR": 5, ...}).
+    Computes simple average per smell abbreviation across ALL submissions.
+    Returns: {"CTL": 2.67, "AR": 4.10, ...} or None if no responses.
+    This is a ROLLING recalculation — called every time a new response arrives.
+
+  PART 4 — calculate_quadrant_results(run_smell_analysis, dds)
+    Combines PS (from git_metrics) and DDS (from survey) per smell.
+    Only includes smells that:
+      - Were actually detected (instance_count > 0)
+      - Have a DDS value (someone responded for this smell)
+    Mean-centres both PS and DDS (subtracts mean across valid smells).
+    _classify_quadrant(norm_ps, norm_dds):
+      norm_ps >= 0 and norm_dds >= 0  → "Prudent & Deliberate"   (HIGH priority)
+      norm_ps >= 0 and norm_dds <  0  → "Reckless & Deliberate"  (MOD-HIGH)
+      norm_ps <  0 and norm_dds >= 0  → "Prudent & Inadvertent"  (MOD-LOW)
+      norm_ps <  0 and norm_dds <  0  → "Reckless & Inadvertent" (LOW)
+    Returns list of 15 dicts: {smellName, abbreviation, PS, DDS,
+                                normalizedPS, normalizedDDS, quadrant, priority}
+    Sorted by quadrant importance then by PS descending.
+
+  CONSTANTS:
+    SMELL_ORDER      — ordered list of 15 abbreviations
+    SMELL_DESCRIPTIONS — one-sentence description shown in the survey form
+    ABBR_TO_NAME     — reverse map from abbreviation to full smell name
+    QUADRANT_PRIORITY— quadrant label → priority text shown in UI
+
+================================================================================
+6. DATABASE SCHEMA (MongoDB Collections)
+================================================================================
+
+── users ────────────────────────────────────────────────────────────────────
+  {
+    _id:        ObjectId,
+    email:      str (unique),
+    password:   str (bcrypt hash),
+    full_name:  str,
+    created_at: datetime
+  }
+
+── projects ─────────────────────────────────────────────────────────────────
+  {
+    _id:        ObjectId,
+    user_id:    ObjectId (ref → users._id),
+    name:       str,
+    repo_url:   str (GitHub URL),
+    cp_weight:  float (0.0..1.0),
+    created_at: datetime
+  }
+  Index: query always filtered by user_id.
+
+── runs ─────────────────────────────────────────────────────────────────────
+  {
+    _id:          ObjectId,
+    project_id:   ObjectId (ref → projects._id),
+    user_id:      ObjectId,
+    run_number:   int  (sequential per project, 1-based),
+    created_at:   datetime,
+    status:       "pending" | "completed" | "failed",
+    cp_weight:    float,
+    summary:      { total_files: int, total_smells: int } | null,
+    smell_analysis: {
+      total_files:  int,
+      total_smells: int,
+      details: [
+        {
+          file:        str (relative path),
+          smells:      [{type, line, message}],
+          smell_count: int
+        }
+      ],
+      git_metrics: {
+        metrics: {
+          "Conditional Test Logic": {
+            cp_score, fp_score, prioritization_score,
+            instance_count, affected_test_files, files_with_smell,
+            change_frequency_rho, change_extent_rho,
+            fault_frequency_rho, fault_extent_rho,
+            p_values: {cf, ce, ff, fe},
+            significant: {cf, ce, ff, fe}
+          },
+          ... (15 entries, one per detected smell type)
+        },
+        statistics: {
+          total_commits, faulty_commits, fault_commit_pct,
+          total_test_files, total_prod_files,
+          smell_types_analyzed, total_smell_instances,
+          cp_weight, fp_weight
+        },
+        ranked_smells: [...same as metrics but sorted list]
+      }
+    } | null,
+    error: str | null
+  }
+  Note: smell_analysis field is EXCLUDED from list runs query (too large).
+        Only included when fetching a single run.
+
+── surveys ──────────────────────────────────────────────────────────────────
+  {
+    _id:             ObjectId,
+    project_id:      ObjectId,
+    run_id:          ObjectId,
+    project_name:    str,
+    contributors: [
+      {
+        name:      str,
+        email:     str,
+        token:     str (UUID4, unique per contributor),
+        submitted: bool
+      }
+    ],
+    created_at:      datetime,
+    dds:             {"CTL": 2.67, "AR": 4.10, ...} | null,
+    quadrant_results: [...15 smell quadrant dicts] | null
+  }
+  One survey document per run. Idempotent re-start re-uses tokens.
+
+── survey_responses ────────────────────────────────────────────────────────
+  {
+    _id:               ObjectId,
+    survey_id:         ObjectId (ref → surveys._id),
+    project_id:        ObjectId,
+    run_id:            ObjectId,
+    contributor_token: str,
+    ratings:           {"CTL": 3, "AR": 5, ...},  (all 15 smells, 1-5)
+    submitted_at:      datetime
+  }
+  One doc per contributor per survey. Multiple responses → DDS rolling avg.
+
+================================================================================
+7. FULL REQUEST LIFECYCLE EXAMPLES
+================================================================================
+
+── A) User Login ────────────────────────────────────────────────────────────
+  1. POST /api/auth/login  {email, password}
+  2. auth.py → users_collection.find_one(email)
+  3. passlib.verify_password(plain, hash) → True
+  4. jose.jwt.encode({sub: email, exp: now+30min}, SECRET_KEY, HS256)
+  5. Return {access_token, token_type: "bearer"}
+
+── B) Quick GitHub Analysis ─────────────────────────────────────────────────
+  1. POST /api/upload/github  {repo_url, cp_weight: 0.6}
+     Authorization: Bearer <token>
+  2. get_current_user() → validates JWT → returns user doc
+  3. subprocess: git clone <url> uploaded_projects/user_<id>/<repo_name>/
+  4. smell_detection.detect_smells_for_project(project_dir, cp_weight=0.6)
+     a. Glob: test_*.py + *_test.py
+     b. For each file: ast.parse() → detect 15 smells
+     c. git_metrics.analyze_project_with_git(project_dir, instances, 0.6)
+        → git log --numstat → parse commits → build metrics vectors
+        → Spearman correlations → CP / FP / PS per smell type
+  5. Return full smell_analysis (NOT saved to DB)
+
+── C) Tracked Project Run ───────────────────────────────────────────────────
+  1. POST /api/projects/{id}/runs
+  2. Insert run doc with status="pending"
+  3. git clone → detect_smells_for_project (same as above)
+  4. UPDATE runs_collection: status="completed", store smell_analysis + summary
+  5. Return RunResponse (smell_analysis included)
+
+── D) Survey Flow ───────────────────────────────────────────────────────────
+  1. POST /api/projects/{id}/runs/{rid}/survey/start
+     a. extract_contributors: git log → unique human emails
+     b. Create survey doc with UUID tokens
+     c. send_survey_emails → Gmail SMTP → each dev gets personalised link
+  2. Developer clicks link → GET /api/survey/{token}
+     → returns project name + 15 smell prompts
+  3. Developer submits → POST /api/survey/{token}/submit
+     a. Validates ratings (all 15 smells, 1-5)
+     b. Saves to survey_responses_collection
+     c. calculate_dds(all_responses) → rolling avg DDS per smell
+     d. calculate_quadrant_results(smell_analysis, dds)
+        → mean-centres PS and DDS → classifies each smell into 4 quadrants
+     e. Updates survey doc: dds + quadrant_results
+  4. Project owner → GET /api/projects/{id}/runs/{rid}/survey
+     → returns survey with dds + quadrant_results
+
+================================================================================
+8. TECHNOLOGIES USED — QUICK REFERENCE
+================================================================================
+
+  FastAPI          — async Python web framework (routes, Depends, validation)
+  Uvicorn          — ASGI server running FastAPI
+  Motor            — async MongoDB driver (AsyncIOMotorClient)
+  PyMongo/bson     — ObjectId handling for MongoDB document IDs
+  Pydantic v2      — request/response validation (BaseModel, Field, EmailStr)
+  pydantic-settings— load .env into Settings class
+  python-jose      — JWT creation and verification (HS256)
+  passlib          — bcrypt password hashing and verification
+  numpy            — array operations for Spearman correlation input
+  scipy.stats      — spearmanr() for measuring correlation between
+                     smell presence and git change/fault metrics
+  fastapi-mail     — async email sending (Gmail SMTP, STARTTLS port 587)
+  subprocess       — system calls to git (clone, log --numstat, log --format)
+  ast              — Python Abstract Syntax Tree: parse source → walk nodes
+                     detect smells without running test code
+  zipfile          — extract uploaded ZIP archives
+  shutil           — recursive directory deletion (rmtree with error handler)
+  pathlib.Path     — all file/dir operations use Path objects (cross-platform)
+  uuid             — generate unique per-contributor survey tokens
+
+
+================================================================================
+9. KEY DESIGN DECISIONS
+================================================================================
+
+  No ORM        : Raw MongoDB dicts. Routes manually convert _id → str for JSON.
+                  Keeps flexibility for nested documents (smell_analysis is deeply nested).
+
+  Synchronous smell detection: detect_smells_for_project runs synchronously
+                  inside an async route. For large repos this blocks the event loop.
+                  Acceptable for a research tool; production would use BackgroundTasks.
+
+  Re-clone on every run: Projects re-clone from GitHub each run.
+                  Ensures fresh code, avoids stale local state, no incremental update.
+                  Trade-off: slower but simpler and always correct.
+
+  cp_weight stored per run: Each run records the cp_weight used at time of analysis.
+                  Allows comparing runs made with different weights consistently.
+
+  Idempotent survey start: Re-calling /survey/start re-uses existing tokens.
+                  Contributors who already got a link keep it valid.
+                  New contributors discovered (if they made commits since last run) get new tokens.
+
+  Rolling DDS: Every new survey submission immediately recalculates DDS and
+                  quadrant_results. Project owner sees live updates without polling.
+
+  GIT_CEILING_DIRECTORIES: Prevents git from traversing up to the application's
+                  own .git folder when analysing an uploaded project that has no .git.
+                  Without this, git would find the testsmellRank repo history — wrong!
+
+  smell_analysis excluded from list: GET /projects/:id/runs excludes the
+                  smell_analysis field (can be megabytes). Only fetched on demand
+                  via GET /projects/:id/runs/:runId to keep listing fast.
+
+================================================================================
+END OF BACKEND GUIDE
+================================================================================

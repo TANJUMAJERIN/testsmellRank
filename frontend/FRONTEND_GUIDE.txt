@@ -1,0 +1,401 @@
+================================================================================
+           FRONTEND COMPLETE WORKING GUIDE — TestSmellRank
+================================================================================
+Tech Stack : React 18 + Vite + React Router v6 + Axios
+Entry Point: index.html  →  src/main.jsx  →  src/App.jsx
+Base API   : /api  (proxied to FastAPI backend by Vite)
+Auth       : JWT Bearer token stored in localStorage("token")
+
+================================================================================
+1. ENTRY FILES
+================================================================================
+
+── index.html ──────────────────────────────────────────────────────────────────
+  Role     : The single HTML page for the whole SPA.
+             Contains <div id="root"> where React mounts.
+  Backend  : None.
+
+── src/main.jsx ────────────────────────────────────────────────────────────────
+  Role     : React app bootstrapper.
+             Wraps <App /> in <React.StrictMode> and mounts it to #root.
+  Backend  : None.
+
+── src/index.css ───────────────────────────────────────────────────────────────
+  Role     : Global CSS resets and base styles shared across entire app.
+  Backend  : None.
+
+── vite.config.js ──────────────────────────────────────────────────────────────
+  Role     : Vite build configuration.
+             Proxies all /api requests to the backend FastAPI server.
+  Backend  : Sets up proxy so frontend /api calls reach the Python server.
+
+================================================================================
+2. APP ROUTER  —  src/App.jsx
+================================================================================
+  Role     : Root component. Wraps everything in <AuthProvider> (global auth
+             state) and defines ALL page routes via React Router.
+
+  Routes Defined:
+  ┌─────────────────────────────────────────┬─────────────────┬────────────────┐
+  │ Path                                    │ Component       │ Auth Required? │
+  ├─────────────────────────────────────────┼─────────────────┼────────────────┤
+  │ /                                       │ Landing         │ No             │
+  │ /login                                  │ Login           │ No             │
+  │ /register                               │ Register        │ No             │
+  │ /dashboard                              │ Dashboard       │ Yes            │
+  │ /quick-analysis                         │ QuickAnalysis   │ Yes            │
+  │ /results                                │ Results         │ Yes            │
+  │ /project/:projectId                     │ ProjectDetail   │ Yes            │
+  │ /project/:projectId/run/:runId          │ Results         │ Yes            │
+  │ /project/:projectId/compare             │ Compare         │ Yes            │
+  │ /project/:projectId/runs/:runId/quadrant│ QuadrantResults │ Yes            │
+  │ /survey/:token                          │ Survey          │ No (public)    │
+  └─────────────────────────────────────────┴─────────────────┴────────────────┘
+
+  Backend  : None directly. Auth-protected routes go through ProtectedRoute.
+
+================================================================================
+3. CONTEXT  —  src/context/AuthContext.jsx
+================================================================================
+  Role     : Global authentication state manager using React Context API.
+             Provides user object, login(), register(), logout() to ALL pages.
+
+  State Managed:
+    user    — currently logged-in user object (null if not logged in)
+    loading — true while checking localStorage token on app start
+
+  On App Load (useEffect → checkAuth):
+    1. Reads token from localStorage.
+    2. Calls GET /api/auth/me to validate token.
+    3. If valid → sets user state.
+    4. If invalid/missing → clears token, user stays null.
+
+  login(credentials):
+    1. POST /api/auth/login → receives access_token.
+    2. Saves token to localStorage.
+    3. GET /api/auth/me → sets user state.
+
+  register(userData):
+    1. POST /api/auth/register → creates account.
+    2. Does NOT auto-login; redirects to /login.
+
+  logout():
+    1. Removes token from localStorage.
+    2. Sets user = null.
+
+  Backend Calls:
+    POST /api/auth/login      — {email, password} → {access_token}
+    POST /api/auth/register   — {email, password, full_name} → user object
+    GET  /api/auth/me         — (Bearer token) → current user object
+
+================================================================================
+4. COMPONENT  —  src/components/ProtectedRoute.jsx
+================================================================================
+  Role     : Route guard wrapper.
+             If user is logged in → renders children (the protected page).
+             If loading → shows a "Loading..." full-screen spinner.
+             If not logged in → redirects to /login.
+
+  Reads from AuthContext: user, loading
+  Backend  : None directly (relies on AuthContext).
+
+================================================================================
+5. API SERVICE  —  src/services/api.js
+================================================================================
+  Role     : Central place for ALL HTTP calls to the backend.
+             Uses Axios. Auto-attaches Bearer token to every request via
+             a request interceptor that reads localStorage("token").
+
+  ── authAPI object ──────────────────────────────────────────────────────────
+    authAPI.register(userData)   → POST /api/auth/register
+    authAPI.login(credentials)   → POST /api/auth/login  (saves token)
+    authAPI.getCurrentUser()     → GET  /api/auth/me
+    authAPI.logout()             → clears localStorage token (no API call)
+
+  ── Upload functions ─────────────────────────────────────────────────────────
+    uploadGithubRepo(repoUrl, cpWeight)  → POST /api/upload/github
+                                           {repo_url, cp_weight} → analysis result
+    uploadZipFile(file, cpWeight)        → POST /api/upload/zip
+                                           multipart/form-data {file, cp_weight}
+                                           → analysis result
+
+  ── Project management (standalone functions) ────────────────────────────────
+    createProject(name, repoUrl, cpWeight) → POST /api/projects/
+    listProjects()                         → GET  /api/projects/
+    deleteProject(projectId)               → DELETE /api/projects/:id
+
+  ── Run management (standalone functions) ────────────────────────────────────
+    triggerRun(projectId)                  → POST /api/projects/:id/runs
+    listRuns(projectId)                    → GET  /api/projects/:id/runs
+    getRun(projectId, runId)               → GET  /api/projects/:id/runs/:rid
+    deleteRun(projectId, runId)            → DELETE /api/projects/:id/runs/:rid
+    compareRuns(projectId, r1, r2)         → GET  /api/projects/:id/compare
+                                              ?run1=r1&run2=r2
+
+  ── projectsAPI object (mirrors above, used by ProjectDetail/Compare/Quadrant) ─
+    projectsAPI.list()
+    projectsAPI.create(name, repoUrl, cpWeight)
+    projectsAPI.delete(projectId)
+    projectsAPI.triggerRun(projectId)
+    projectsAPI.listRuns(projectId)
+    projectsAPI.getRun(projectId, runId)
+    projectsAPI.deleteRun(projectId, runId)
+    projectsAPI.compare(projectId, run1Id, run2Id)
+    projectsAPI.startSurvey(projectId, runId)   → POST /api/projects/:id/runs/:rid/survey/start
+    projectsAPI.getSurveyStatus(projectId, runId)→ GET  /api/projects/:id/runs/:rid/survey
+
+================================================================================
+6. PAGES
+================================================================================
+
+── Landing.jsx  ( / ) ──────────────────────────────────────────────────────────
+  Role     : Public marketing/home page. No auth needed.
+  Shows    : Branding, feature cards (Smart Detection, Detailed Analysis,
+             Fast Processing), Login and Register buttons.
+  Navigation: → /login, → /register
+  Backend  : None.
+  CSS      : Landing.css
+
+── Login.jsx  ( /login ) ───────────────────────────────────────────────────────
+  Role     : Login form page.
+  Shows    : Email + Password form.
+  On Submit: calls AuthContext.login({email, password})
+             → POST /api/auth/login + GET /api/auth/me
+             If success → navigate to /dashboard
+             If error → displays error message
+  Backend  : POST /api/auth/login  →  {access_token}
+             GET  /api/auth/me     →  user object
+  CSS      : Auth.css
+
+── Register.jsx  ( /register ) ─────────────────────────────────────────────────
+  Role     : Registration form page.
+  Shows    : Full Name + Email + Password form.
+             Client-side validation: password min 6 chars.
+  On Submit: calls AuthContext.register({full_name, email, password})
+             → POST /api/auth/register
+             If success → navigate to /login
+             If error → displays error message
+  Backend  : POST /api/auth/register  →  user object
+  CSS      : Auth.css
+
+── Dashboard.jsx  ( /dashboard ) ───────────────────────────────────────────────
+  Role     : Main hub after login. Manages tracked projects.
+  Shows    : Navbar (welcome + logout), Sidebar (Dashboard / Quick Analysis),
+             Table of user's projects (name, repo URL, run count, created date),
+             "New Project" button, delete confirmation modal.
+  On Load  : GET /api/projects/ → loads all user projects.
+  Create Project Modal:
+             - Input: Project Name, GitHub URL, CP/FP weight slider.
+             - POST /api/projects/ → creates project → navigate to /project/:id
+  Delete   : DELETE /api/projects/:id → removes from list.
+  Backend  : GET    /api/projects/         →  [{id, name, repo_url, run_count, created_at}]
+             POST   /api/projects/         →  {id, name, repo_url, ...}
+             DELETE /api/projects/:id      →  confirmation
+  CSS      : Dashboard.css
+
+── QuickAnalysis.jsx  ( /quick-analysis ) ──────────────────────────────────────
+  Role     : One-off analysis WITHOUT saving to project history.
+  Shows    : Mode toggle (ZIP File / GitHub URL), file upload or URL input,
+             CP/FP weight selector (Equal 50/50 or Custom slider).
+  ZIP Mode : POST /api/upload/zip (multipart) → navigate /results with data
+  GitHub   : POST /api/upload/github {repo_url, cp_weight} → navigate /results
+  Note     : Results are NOT stored in the database. User sees them once.
+  Backend  : POST /api/upload/zip    →  smell_analysis result object
+             POST /api/upload/github →  smell_analysis result object
+  CSS      : Dashboard.css (reuses same styling)
+
+── Results.jsx  ( /results  OR  /project/:id/run/:runId ) ──────────────────────
+  Role     : Displays full analysis results for a single run.
+             Works in two modes:
+             Mode A — Quick analysis: data passed via router state (location.state.projectData)
+             Mode B — Saved run: fetches via GET /api/projects/:id/runs/:runId
+
+  Shows    :
+    - Summary cards: Total Files, Total Smells, Unique Smell Types
+    - Smell Type Distribution: bar chart per smell type with % of total
+    - Git-based Prioritization Table:
+        Columns: Smell Type, Instances, CP Score, FP Score, Priority Score, Rank
+        Sorted by prioritization_score descending
+        Top 3 highlighted as "high priority"
+    - Git Statistics: total commits, faulty commits, fault rate %
+    - Metrics Explanation legend (CP = Change Proneness, FP = Fault Proneness)
+    - Detailed per-file results table:
+        Columns: File Name, Smell Type, Line Number, Message, Status
+        Status badge: Clean (no smells) / Error / smell list
+
+  Backend  : GET /api/projects/:id/runs/:runId
+             Returns {smell_analysis: {total_files, total_smells, details[], git_metrics}}
+             git_metrics: {metrics: {smellType: {cp_score, fp_score,
+                           prioritization_score, instance_count}},
+                           statistics: {total_commits, faulty_commits, fault_commit_pct}}
+  CSS      : Results.css
+
+── ProjectDetail.jsx  ( /project/:projectId ) ──────────────────────────────────
+  Role     : Per-project hub. Shows all runs of a project and controls.
+  Shows    :
+    - Project name, repo URL, subtitle
+    - "Run Analysis" button (triggers new analysis run)
+    - Runs table: Run#, Date, Status (Completed/Pending/Failed),
+                  Files count, Smells count, View/Delete/Survey buttons
+    - Checkbox selection for comparing two runs
+    - Compare bar (when 2 runs selected)
+    - Survey panel (expandable per run)
+    - Delete run confirmation modal
+
+  On Load  : GET /api/projects/ + GET /api/projects/:id/runs (parallel)
+  Run Analysis: POST /api/projects/:id/runs → new run added to table
+  View Run : GET /api/projects/:id/runs/:runId → navigate to /results
+  Delete Run: DELETE /api/projects/:id/runs/:runId
+  Compare  : navigate to /project/:id/compare?run1=X&run2=Y
+  Survey Panel (SurveyPanel sub-component):
+    - GET /api/projects/:id/runs/:runId/survey → check if survey exists
+    - POST /api/projects/:id/runs/:runId/survey/start → creates survey + sends emails
+    - Shows: survey link, respondent list with submission status
+    - "View Quadrant" button → navigate /project/:id/runs/:runId/quadrant
+
+  Backend  : GET    /api/projects/                             → project list
+             GET    /api/projects/:id/runs                     → [{id, run_number, status, summary, created_at}]
+             POST   /api/projects/:id/runs                     → triggers new run
+             GET    /api/projects/:id/runs/:runId              → full run data
+             DELETE /api/projects/:id/runs/:runId              → removes run
+             GET    /api/projects/:id/runs/:runId/survey       → survey status
+             POST   /api/projects/:id/runs/:runId/survey/start → starts survey
+  CSS      : ProjectDetail.css
+
+── Compare.jsx  ( /project/:projectId/compare?run1=X&run2=Y ) ──────────────────
+  Role     : Side-by-side comparison of two analysis runs for a project.
+  Shows    :
+    - Two run header cards (Run #N, date, total smells)
+    - Summary badges: Improved / Worsened / Unchanged count
+    - Comparison table:
+        Columns: Smell Type, Run1 Rank, Run2 Rank, Rank Change,
+                 Score Run1, Score Run2, Score Change
+        Row color: green if improved, red if worsened
+    - Legend explaining "improved" and "worsened"
+
+  On Load  : GET /api/projects/:id/compare?run1=X&run2=Y
+  Backend  : GET /api/projects/:id/compare?run1=X&run2=Y
+             Returns {run1: {...}, run2: {...},
+                      summary: {improved, worsened, unchanged},
+                      comparison: [{smell_type, run1_rank, run2_rank,
+                                    rank_change, run1_score, run2_score,
+                                    score_change}]}
+  CSS      : Compare.css
+
+── Survey.jsx  ( /survey/:token ) ──────────────────────────────────────────────
+  Role     : PUBLIC page (no login needed). Shown to developers who receive
+             a survey email link. They rate how important each test smell is.
+  States   : loading, form display, already submitted, success, error.
+  Shows    :
+    - Intro: project name, contributor name, rating scale guide
+    - List of smell cards (abbreviation, name, description)
+    - Per smell: 1–5 Likert scale buttons (Not Important → Critical)
+    - Progress bar: X / Total rated
+    - Submit button (disabled until all smells rated)
+
+  On Load  : GET /api/survey/:token
+             Returns {project_name, contributor_name, smells: [{abbreviation, name, description}]}
+             OR {already_submitted: true}
+  On Submit: POST /api/survey/:token/submit  {ratings: {ABBR: 1-5, ...}}
+  Backend  : GET  /api/survey/:token          →  survey form data or already_submitted flag
+             POST /api/survey/:token/submit   →  {ratings: {smellAbbr: 1-5}}
+  CSS      : Survey.css
+
+── QuadrantResults.jsx  ( /project/:projectId/runs/:runId/quadrant ) ────────────
+  Role     : Shows the 2×2 Technical Debt Quadrant combining PS (empirical)
+             and DDS (developer survey score) for each smell type.
+  Shows    :
+    - 4 stat cards: HIGH, MODERATE-HIGH, MODERATE-LOW, LOW smell counts
+    - 2×2 Quadrant grid:
+        Top-Left:     Prudent & Inadvertent   (Low PS, High DDS)
+        Top-Right:    Prudent & Deliberate    (High PS, High DDS)
+        Bottom-Left:  Reckless & Inadvertent  (Low PS, Low DDS)
+        Bottom-Right: Reckless & Deliberate   (High PS, Low DDS)
+      Each cell shows smell abbreviation chips.
+    - Full ranked table: Smell, PS, DDS, Norm-PS, Norm-DDS, Priority, Quadrant
+    - Legend explaining PS and DDS
+
+  On Load  : GET /api/projects/:id/runs/:runId/survey
+             Returns {quadrant_results: [{abbreviation, smellName, PS, DDS,
+                                          norm_PS, norm_DDS, quadrant, priority}]}
+  Backend  : GET /api/projects/:id/runs/:runId/survey  →  quadrant data
+  CSS      : QuadrantResults.css
+
+================================================================================
+7. CSS FILES (STYLING ONLY — No logic)
+================================================================================
+
+  Auth.css           — Login.jsx and Register.jsx card/form layout
+  Landing.css        — Hero section, feature cards, header buttons
+  Dashboard.css      — Navbar, sidebar, project table, modals, weights slider
+                       (also reused by QuickAnalysis.jsx)
+  Results.css        — Summary cards, smell type grid, priority table, detail table
+  ProjectDetail.css  — Runs table, survey panel, status chips, compare bar
+  Compare.css        — Run meta cards, VS divider, comparison table color rows
+  Survey.css         — Smell card list, Likert buttons, progress bar
+  QuadrantResults.css— Stat cards, 2x2 quadrant grid, scored table
+
+================================================================================
+8. DATA FLOW SUMMARY  (End-to-End)
+================================================================================
+
+  USER REGISTERS / LOGS IN
+    Register → POST /api/auth/register
+    Login    → POST /api/auth/login → stores JWT in localStorage
+               GET  /api/auth/me   → stores user in AuthContext
+
+  QUICK ANALYSIS (no history)
+    Upload ZIP  → POST /api/upload/zip   → smell_analysis object
+    GitHub URL  → POST /api/upload/github → smell_analysis object
+    → navigate to /results with data in router state (no DB write)
+
+  TRACKED PROJECT FLOW (history saved)
+    Create project → POST /api/projects/    → project ID in DB
+    View project   → GET  /api/projects/:id/runs
+    Run analysis   → POST /api/projects/:id/runs  (backend clones repo, detects smells)
+    View results   → GET  /api/projects/:id/runs/:runId → Results page
+    Compare runs   → GET  /api/projects/:id/compare?run1=X&run2=Y → Compare page
+    Start survey   → POST /api/projects/:id/runs/:runId/survey/start
+                     (backend sends emails to git contributors with /survey/:token links)
+    Survey fill    → GET/POST /api/survey/:token  (public, no auth)
+    View quadrant  → GET  /api/projects/:id/runs/:runId/survey
+                     (returns combined PS + DDS quadrant data)
+
+  AUTH GUARD
+    Every protected page checks AuthContext.user via ProtectedRoute.
+    If null → redirect to /login.
+    Token is sent automatically via Axios interceptor on every API call.
+
+================================================================================
+9. KEY CONCEPTS USED IN FRONTEND
+================================================================================
+
+  React Context API  — AuthContext shares user/login/logout across all pages
+                        without prop drilling.
+
+  React Router v6    — <Routes>, useParams(), useNavigate(), useLocation(),
+                        useSearchParams() used throughout.
+
+  Axios Interceptors — Auto-attach Authorization: Bearer <token> to requests.
+
+  Router State       — navigate("/results", {state: {projectData}}) passes
+                        API response directly to Results page to avoid
+                        extra API call after Quick Analysis.
+
+  CP Weight / FP Weight — User-configurable slider (0.0 to 1.0):
+                        CP = Change Proneness (how often smelly files change)
+                        FP = Fault Proneness  (how often they cause bugs)
+                        Priority Score = (CP * cpWeight) + (FP * (1-cpWeight))
+
+  Likert Scale       — 1 (Not Important) to 5 (Critical) ratings in survey,
+                        averaged per smell type to produce DDS score.
+
+  Quadrant Labels    —
+    Prudent & Deliberate   : High PS + High DDS → REFACTOR IMMEDIATELY
+    Reckless & Deliberate  : High PS + Low DDS  → REFACTOR SOON
+    Prudent & Inadvertent  : Low PS  + High DDS → WHEN POSSIBLE
+    Reckless & Inadvertent : Low PS  + Low DDS  → MONITOR / DEFER
+
+================================================================================
+END OF GUIDE
+================================================================================
